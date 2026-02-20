@@ -48,7 +48,6 @@ async fn main() -> anyhow::Result<()> {
                 client: k8s_client,
                 namespace: config.k8s_namespace.clone(),
                 blockfrost_project_id: config.blockfrost_project_id.clone(),
-                hydra_scripts_tx_id: config.hydra_scripts_tx_id.clone(),
                 hydra_node_image: config.hydra_node_image.clone(),
             })
         }

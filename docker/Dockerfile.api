@@ -7,11 +7,22 @@ RUN cargo build --release -p hh-api
 
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r hydrahouse && useradd -r -g hydrahouse -d /app hydrahouse
 
 COPY --from=builder /app/target/release/hh-api /usr/local/bin/hh-api
+COPY --from=builder /app/config/protocol-parameters.json /app/config/protocol-parameters.json
+
+USER hydrahouse
+WORKDIR /app
 
 ENV LISTEN_ADDR=0.0.0.0:3000
 EXPOSE 3000
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000/healthz || exit 1
 
 CMD ["hh-api"]

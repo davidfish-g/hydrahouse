@@ -1,3 +1,7 @@
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use axum::{
     extract::{Request, State},
     http::StatusCode,
@@ -20,12 +24,30 @@ fn extract_api_key(req: &Request) -> Option<String> {
     }
 }
 
-/// Hash an API key for DB storage/lookup.
-/// Uses hex encoding of the key bytes (deterministic, reproducible from any language).
-/// From bash: printf '%s' "hh_sk_mykey" | od -A n -t x1 | tr -d ' \n'
-/// In prod, replace with argon2/bcrypt.
+/// Hash an API key using Argon2id for secure storage.
 pub fn hash_api_key(key: &str) -> String {
-    key.as_bytes().iter().map(|b| format!("{b:02x}")).collect()
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    argon2
+        .hash_password(key.as_bytes(), &salt)
+        .expect("argon2 hashing should not fail")
+        .to_string()
+}
+
+/// Verify an API key against a stored hash.
+/// Supports both Argon2id hashes (prefixed with `$argon2`) and legacy hex hashes.
+pub fn verify_api_key(key: &str, stored_hash: &str) -> bool {
+    if stored_hash.starts_with("$argon2") {
+        let Ok(parsed) = PasswordHash::new(stored_hash) else {
+            return false;
+        };
+        Argon2::default()
+            .verify_password(key.as_bytes(), &parsed)
+            .is_ok()
+    } else {
+        let legacy_hash: String = key.as_bytes().iter().map(|b| format!("{b:02x}")).collect();
+        legacy_hash == stored_hash
+    }
 }
 
 pub async fn require_auth(
@@ -34,12 +56,16 @@ pub async fn require_auth(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let api_key = extract_api_key(&req).ok_or(StatusCode::UNAUTHORIZED)?;
-    let key_hash = hash_api_key(&api_key);
 
-    let account = hh_db::repo::accounts::find_by_api_key_hash(&state.db, &key_hash)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .ok_or(StatusCode::UNAUTHORIZED)?;
+    let account = hh_db::repo::accounts::find_and_verify_api_key(
+        &state.db,
+        &api_key,
+        verify_api_key,
+        hash_api_key,
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(StatusCode::UNAUTHORIZED)?;
 
     req.extensions_mut().insert(AccountId(account.id));
     Ok(next.run(req).await)
@@ -53,16 +79,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn hash_is_deterministic() {
-        let h1 = hash_api_key("hh_sk_test123");
-        let h2 = hash_api_key("hh_sk_test123");
-        assert_eq!(h1, h2);
+    fn argon2_hash_and_verify() {
+        let key = "hh_sk_test123";
+        let hash = hash_api_key(key);
+        assert!(hash.starts_with("$argon2"));
+        assert!(verify_api_key(key, &hash));
+        assert!(!verify_api_key("hh_sk_wrong", &hash));
     }
 
     #[test]
-    fn hash_is_different_for_different_keys() {
-        let h1 = hash_api_key("hh_sk_key1");
-        let h2 = hash_api_key("hh_sk_key2");
-        assert_ne!(h1, h2);
+    fn legacy_hex_verify() {
+        let key = "hh_sk_test123";
+        let legacy_hash: String = key.as_bytes().iter().map(|b| format!("{b:02x}")).collect();
+        assert!(verify_api_key(key, &legacy_hash));
+        assert!(!verify_api_key("hh_sk_wrong", &legacy_hash));
     }
 }

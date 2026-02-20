@@ -65,7 +65,6 @@ fn test_config() -> AppConfig {
         k8s_namespace: "test".into(),
         data_dir: "/tmp/hh-test".into(),
         blockfrost_project_id: "test-project".into(),
-        hydra_scripts_tx_id: "test-scripts-tx".into(),
         hydra_node_image: "test-image:latest".into(),
     }
 }
