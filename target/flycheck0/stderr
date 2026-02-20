@@ -1,6 +1,5 @@
-   0.199989292s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint: dependency on `hh_core` is newer than we are 1771548008.747063129s > 1771543546.138291148s "/Users/fish/Code/hydrahouse/crates/hh-keys"
-   0.213945458s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_api", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-api/src/lib.rs", Edition2021) }
-   0.214654833s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-27c4a535a58b70d8/lib-hh_api`
+   0.187698917s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_api", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-api/src/lib.rs", Edition2021) }
+   0.187887167s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-f0bf43258754bfa0/lib-hh_api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -24,12 +23,113 @@ Stack backtrace:
   15: std::rt::lang_start::<()>::{closure#0}
   16: std::rt::lang_start_internal
   17: _main
-   0.253719208s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint: fingerprint dirty for hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_keys", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-keys/src/lib.rs", Edition2021) }
-   0.253733458s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { name: "hh_core", dep_mtime: FileTime { seconds: 1771548008, nanos: 747063129 }, max_mtime: FileTime { seconds: 1771543546, nanos: 138291148 } })
-   0.255466292s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint dirty for hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_orchestrator", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-orchestrator/src/lib.rs", Edition2021) }
-   0.255479875s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "hh_keys" })
-   0.265485083s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("hh_api", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-api/src/lib.rs", Edition2021) }
-   0.265490667s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-8f21cb2ee05b192e/test-lib-hh_api`
+   0.198924042s  INFO prepare_target{force=false package_id=argon2 v0.5.3 target="argon2"}: cargo::core::compiler::fingerprint: fingerprint error for argon2 v0.5.3/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("argon2", ["lib"], "/Users/fish/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/argon2-0.5.3/src/lib.rs", Edition2021) }
+   0.198933042s  INFO prepare_target{force=false package_id=argon2 v0.5.3 target="argon2"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/argon2-9cb3ac0af6c9d482/lib-argon2`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: cargo::core::compiler::compile
+   8: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   9: cargo::ops::cargo_compile::compile_ws
+  10: cargo::ops::cargo_compile::compile_with_exec
+  11: cargo::ops::cargo_compile::compile
+  12: cargo::commands::check::exec
+  13: <cargo::cli::Exec>::exec
+  14: cargo::main
+  15: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  16: std::rt::lang_start::<()>::{closure#0}
+  17: std::rt::lang_start_internal
+  18: _main
+   0.199250917s  INFO prepare_target{force=false package_id=blake2 v0.10.6 target="blake2"}: cargo::core::compiler::fingerprint: fingerprint error for blake2 v0.10.6/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("blake2", ["lib"], "/Users/fish/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/blake2-0.10.6/src/lib.rs", Edition2018) }
+   0.199254375s  INFO prepare_target{force=false package_id=blake2 v0.10.6 target="blake2"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/blake2-bf35e145b56c68a7/lib-blake2`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: cargo::core::compiler::compile
+   8: cargo::core::compiler::compile
+   9: <cargo::core::compiler::build_runner::BuildRunner>::compile
+  10: cargo::ops::cargo_compile::compile_ws
+  11: cargo::ops::cargo_compile::compile_with_exec
+  12: cargo::ops::cargo_compile::compile
+  13: cargo::commands::check::exec
+  14: <cargo::cli::Exec>::exec
+  15: cargo::main
+  16: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  17: std::rt::lang_start::<()>::{closure#0}
+  18: std::rt::lang_start_internal
+  19: _main
+   0.225268417s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint: fingerprint error for hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_keys", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-keys/src/lib.rs", Edition2021) }
+   0.225280000s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-keys-537bbe650b0cb8a8/lib-hh_keys`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: cargo::core::compiler::compile
+   8: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   9: cargo::ops::cargo_compile::compile_ws
+  10: cargo::ops::cargo_compile::compile_with_exec
+  11: cargo::ops::cargo_compile::compile
+  12: cargo::commands::check::exec
+  13: <cargo::cli::Exec>::exec
+  14: cargo::main
+  15: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  16: std::rt::lang_start::<()>::{closure#0}
+  17: std::rt::lang_start_internal
+  18: _main
+   0.226273125s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint error for hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hh_orchestrator", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-orchestrator/src/lib.rs", Edition2021) }
+   0.226277333s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-orchestrator-4909f7b900d1c9ca/lib-hh_orchestrator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: cargo::core::compiler::compile
+   8: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   9: cargo::ops::cargo_compile::compile_ws
+  10: cargo::ops::cargo_compile::compile_with_exec
+  11: cargo::ops::cargo_compile::compile
+  12: cargo::commands::check::exec
+  13: <cargo::cli::Exec>::exec
+  14: cargo::main
+  15: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  16: std::rt::lang_start::<()>::{closure#0}
+  17: std::rt::lang_start_internal
+  18: _main
+   0.235832583s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("hh_api", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-api/src/lib.rs", Edition2021) }
+   0.235842375s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh_api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-f161b5bea092c5e3/test-lib-hh_api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -53,8 +153,8 @@ Stack backtrace:
   15: std::rt::lang_start::<()>::{closure#0}
   16: std::rt::lang_start_internal
   17: _main
-   0.266482792s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: false }/TargetInner { name: "hh-api", doc: true, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/src/main.rs", Edition2021) }
-   0.266486375s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-9f36cc1e2a1ccae7/bin-hh-api`
+   0.236894125s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: false }/TargetInner { name: "hh-api", doc: true, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/src/main.rs", Edition2021) }
+   0.236899125s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-7335c41dfa62cc3e/bin-hh-api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -78,8 +178,8 @@ Stack backtrace:
   15: std::rt::lang_start::<()>::{closure#0}
   16: std::rt::lang_start_internal
   17: _main
-   0.267412958s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { name: "hh-api", doc: true, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/src/main.rs", Edition2021) }
-   0.267416208s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-57647d95099e54cf/test-bin-hh-api`
+   0.237813917s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { name: "hh-api", doc: true, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/src/main.rs", Edition2021) }
+   0.237817042s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="hh-api"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-4d766e402f6ac67f/test-bin-hh-api`
 
 Caused by:
     No such file or directory (os error 2)
@@ -103,8 +203,8 @@ Stack backtrace:
   15: std::rt::lang_start::<()>::{closure#0}
   16: std::rt::lang_start_internal
   17: _main
-   0.268316250s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="api_test"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { kind: "test", name: "api_test", benched: false, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/tests/api_test.rs", Edition2021) }
-   0.268320000s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="api_test"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-ac3834c722d70002/test-integration-test-api_test`
+   0.238825542s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="api_test"}: cargo::core::compiler::fingerprint: fingerprint error for hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)/Check { test: true }/TargetInner { kind: "test", name: "api_test", benched: false, ..: with_path("/Users/fish/Code/hydrahouse/crates/hh-api/tests/api_test.rs", Edition2021) }
+   0.238831000s  INFO prepare_target{force=false package_id=hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api) target="api_test"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-api-e2d691ac8585902b/test-integration-test-api_test`
 
 Caused by:
     No such file or directory (os error 2)
@@ -128,9 +228,59 @@ Stack backtrace:
   15: std::rt::lang_start::<()>::{closure#0}
   16: std::rt::lang_start_internal
   17: _main
-   0.274255750s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint dirty for hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("hh_orchestrator", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-orchestrator/src/lib.rs", Edition2021) }
-   0.274266375s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "hh_keys" })
+   0.247206875s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint: fingerprint error for hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("hh_keys", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-keys/src/lib.rs", Edition2021) }
+   0.247218917s  INFO prepare_target{force=false package_id=hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys) target="hh_keys"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-keys-29b6bab92f4b1728/test-lib-hh_keys`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_ws
+   9: cargo::ops::cargo_compile::compile_with_exec
+  10: cargo::ops::cargo_compile::compile
+  11: cargo::commands::check::exec
+  12: <cargo::cli::Exec>::exec
+  13: cargo::main
+  14: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  15: std::rt::lang_start::<()>::{closure#0}
+  16: std::rt::lang_start_internal
+  17: _main
+   0.247611542s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint error for hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("hh_orchestrator", ["lib"], "/Users/fish/Code/hydrahouse/crates/hh-orchestrator/src/lib.rs", Edition2021) }
+   0.247615833s  INFO prepare_target{force=false package_id=hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator) target="hh_orchestrator"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/fish/Code/hydrahouse/target/debug/.fingerprint/hh-orchestrator-280061e7d34dfc71/test-lib-hh_orchestrator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: std::backtrace::Backtrace::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_ws
+   9: cargo::ops::cargo_compile::compile_with_exec
+  10: cargo::ops::cargo_compile::compile
+  11: cargo::commands::check::exec
+  12: <cargo::cli::Exec>::exec
+  13: cargo::main
+  14: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  15: std::rt::lang_start::<()>::{closure#0}
+  16: std::rt::lang_start_internal
+  17: _main
+    Checking blake2 v0.10.6
     Checking hh-keys v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-keys)
+    Checking argon2 v0.5.3
     Checking hh-orchestrator v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-orchestrator)
     Checking hh-api v0.1.0 (/Users/fish/Code/hydrahouse/crates/hh-api)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.02s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.05s

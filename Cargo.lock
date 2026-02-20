@@ -1030,6 +1030,7 @@ dependencies = [
  "hh-keys",
  "hh-orchestrator",
  "kube",
+ "rand 0.8.5",
  "reqwest",
  "serde",
  "serde_json",
@@ -1088,6 +1089,7 @@ dependencies = [
 name = "hh-keys"
 version = "0.1.0"
 dependencies = [
+ "blake2",
  "ed25519-dalek",
  "hex",
  "hh-core",

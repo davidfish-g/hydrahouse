@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::state::AppState;
 
 /// Resolve the HTTP base URL for a hydra-node from the orchestrator's WS URL.
-async fn node_http_url(state: &Arc<AppState>, head_id: Uuid, node_index: u32) -> String {
+pub async fn node_http_url(state: &Arc<AppState>, head_id: Uuid, node_index: u32) -> String {
     match state.orchestrator.get_node_ws_url(head_id, node_index).await {
         Ok(ws_url) => ws_url.replace("ws://", "http://").replace("wss://", "https://"),
         Err(_) => format!("http://127.0.0.1:{}", 14001 + node_index as u16),
@@ -16,19 +16,65 @@ async fn node_http_url(state: &Arc<AppState>, head_id: Uuid, node_index: u32) ->
 
 /// Spawn a background task that connects to a hydra-node's WebSocket and
 /// monitors events to advance the head through its lifecycle states.
+/// Automatically reconnects on disconnect while the head remains active.
 pub fn spawn_lifecycle_monitor(state: Arc<AppState>, head_id: Uuid, node_index: u32) {
     tokio::spawn(async move {
-        if let Err(e) = run_lifecycle_monitor(state, head_id, node_index).await {
-            tracing::error!(%head_id, error = %e, "lifecycle monitor exited with error");
+        let mut attempt = 0u32;
+        loop {
+            attempt += 1;
+            match run_lifecycle_monitor(state.clone(), head_id, node_index).await {
+                Ok(MonitorExit::HeadFinalized) => {
+                    tracing::info!(%head_id, "lifecycle monitor: head finalized, stopping");
+                    break;
+                }
+                Ok(MonitorExit::HeadAborted) => {
+                    tracing::info!(%head_id, "lifecycle monitor: head aborted, stopping");
+                    break;
+                }
+                Ok(MonitorExit::Disconnected) => {
+                    if !is_head_active(&state.db, head_id).await {
+                        tracing::info!(%head_id, "lifecycle monitor: head no longer active, stopping");
+                        break;
+                    }
+                    let backoff = std::cmp::min(2u64.pow(attempt.min(5)), 30);
+                    tracing::warn!(%head_id, attempt, backoff_secs = backoff, "lifecycle monitor disconnected, reconnecting");
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                }
+                Err(e) => {
+                    if !is_head_active(&state.db, head_id).await {
+                        tracing::info!(%head_id, error = %e, "lifecycle monitor error but head inactive, stopping");
+                        break;
+                    }
+                    let backoff = std::cmp::min(2u64.pow(attempt.min(5)), 30);
+                    tracing::error!(%head_id, attempt, error = %e, backoff_secs = backoff, "lifecycle monitor error, reconnecting");
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                }
+            }
         }
     });
+}
+
+async fn is_head_active(db: &sqlx::PgPool, head_id: Uuid) -> bool {
+    match hh_db::repo::heads::find_by_id(db, head_id).await {
+        Ok(Some(h)) => matches!(
+            h.status.as_str(),
+            "provisioning" | "requested" | "initializing" | "committing" | "open" | "closing" | "closed"
+        ),
+        _ => false,
+    }
+}
+
+enum MonitorExit {
+    HeadFinalized,
+    HeadAborted,
+    Disconnected,
 }
 
 async fn run_lifecycle_monitor(
     state: Arc<AppState>,
     head_id: Uuid,
     node_index: u32,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<MonitorExit> {
     let ws_url = state
         .orchestrator
         .get_node_ws_url(head_id, node_index)
@@ -37,9 +83,6 @@ async fn run_lifecycle_monitor(
 
     tracing::info!(%head_id, %ws_url, "lifecycle monitor connecting to hydra-node");
 
-    // Retry connection with backoff -- containers can take 30-60s to become ready,
-    // and may crash and need to be restarted (e.g. unfunded wallet).
-    // 90 retries * 2s = 3 minutes of patience.
     let mut retries = 0;
     let ws_stream = loop {
         match connect_async(&ws_url).await {
@@ -68,7 +111,7 @@ async fn run_lifecycle_monitor(
             Ok(m) => m,
             Err(e) => {
                 tracing::warn!(%head_id, error = %e, "ws read error from hydra-node");
-                break;
+                return Ok(MonitorExit::Disconnected);
             }
         };
 
@@ -96,16 +139,14 @@ async fn run_lifecycle_monitor(
 
                 match head_status {
                     "Idle" => {
-                        // Send Init via WebSocket
                         tracing::info!(%head_id, "sending Init command via WebSocket");
                         use futures_util::SinkExt;
-                        let init_msg = serde_json::json!({"tag": "Init"});
+                        let init_msg = json!({"tag": "Init"});
                         if let Err(e) = tx.send(tokio_tungstenite::tungstenite::Message::text(init_msg.to_string())).await {
                             tracing::error!(%head_id, error = %e, "failed to send Init");
                         }
                     }
                     "Initializing" => {
-                        // Already initialized, need to commit
                         tracing::info!(%head_id, "node already initializing, sending commit");
                         auto_commit_empty(&state, head_id).await;
                     }
@@ -120,120 +161,65 @@ async fn run_lifecycle_monitor(
             }
 
             "HeadIsInitializing" => {
-                let _ = hh_db::repo::heads::update_status(&state.db, head_id, "committing")
-                    .await;
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "head_initializing",
-                    &event,
-                )
-                .await;
-
+                let _ = hh_db::repo::heads::update_status(&state.db, head_id, "committing").await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "head_initializing", &event).await;
                 tracing::info!(%head_id, "head initializing, auto-committing empty for all participants");
                 auto_commit_empty(&state, head_id).await;
             }
 
             "Committed" => {
                 let party = event.get("party").cloned().unwrap_or(json!(null));
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "participant_committed",
-                    &json!({ "party": party }),
-                )
-                .await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "participant_committed", &json!({ "party": party })).await;
                 tracing::info!(%head_id, "participant committed");
             }
 
             "HeadIsOpen" => {
                 let _ = hh_db::repo::heads::update_status(&state.db, head_id, "open").await;
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "head_opened",
-                    &event,
-                )
-                .await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "head_opened", &event).await;
 
-                if let Ok(participants) =
-                    hh_db::repo::participants::list_by_head(&state.db, head_id).await
-                {
+                if let Ok(participants) = hh_db::repo::participants::list_by_head(&state.db, head_id).await {
                     for p in &participants {
-                        let _ = hh_db::repo::participants::update_commit_status(
-                            &state.db,
-                            p.id,
-                            "committed",
-                        )
-                        .await;
+                        let _ = hh_db::repo::participants::update_commit_status(&state.db, p.id, "committed").await;
                     }
                 }
-
                 tracing::info!(%head_id, "*** HEAD IS OPEN ***");
             }
 
             "HeadIsClosed" => {
                 let _ = hh_db::repo::heads::update_status(&state.db, head_id, "closed").await;
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "head_closed",
-                    &event,
-                )
-                .await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "head_closed", &event).await;
                 tracing::info!(%head_id, "head CLOSED, waiting for contestation period");
             }
 
             "ReadyToFanout" => {
-                tracing::info!(%head_id, "contestation period ended, sending Fanout");
-                let http_url = node_http_url(&state, head_id, node_index).await;
-                let client = reqwest::Client::new();
-                let _ = client.post(format!("{http_url}/fanout")).send().await;
+                tracing::info!(%head_id, "contestation period ended, sending Fanout via WebSocket");
+                use futures_util::SinkExt;
+                let fanout_msg = json!({"tag": "Fanout"});
+                if let Err(e) = tx.send(tokio_tungstenite::tungstenite::Message::text(fanout_msg.to_string())).await {
+                    tracing::error!(%head_id, error = %e, "failed to send Fanout");
+                }
             }
 
             "HeadIsFinalized" => {
-                let _ = hh_db::repo::heads::update_status(&state.db, head_id, "fanned_out")
-                    .await;
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "head_finalized",
-                    &event,
-                )
-                .await;
+                let _ = hh_db::repo::heads::update_status(&state.db, head_id, "fanned_out").await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "head_finalized", &event).await;
                 tracing::info!(%head_id, "head FINALIZED, tearing down resources");
 
                 if let Ok(Some(head)) = hh_db::repo::heads::find_by_id(&state.db, head_id).await {
-                    let _ = state
-                        .orchestrator
-                        .teardown_head(head_id, head.participant_count as u32)
-                        .await;
+                    let _ = state.orchestrator.teardown_head(head_id, head.participant_count as u32).await;
                 }
-
-                break;
+                return Ok(MonitorExit::HeadFinalized);
             }
 
             "HeadIsAborted" => {
                 let _ = hh_db::repo::heads::update_status(&state.db, head_id, "aborted").await;
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    "head_aborted_by_protocol",
-                    &event,
-                )
-                .await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, "head_aborted_by_protocol", &event).await;
                 tracing::warn!(%head_id, "head ABORTED by protocol");
-                break;
+                return Ok(MonitorExit::HeadAborted);
             }
 
             "SnapshotConfirmed" | "TxValid" | "TxInvalid" => {
-                let _ = hh_db::repo::head_events::insert(
-                    &state.db,
-                    head_id,
-                    tag,
-                    &event,
-                )
-                .await;
+                let _ = hh_db::repo::head_events::insert(&state.db, head_id, tag, &event).await;
             }
 
             _ => {
@@ -242,8 +228,8 @@ async fn run_lifecycle_monitor(
         }
     }
 
-    tracing::info!(%head_id, "lifecycle monitor exiting");
-    Ok(())
+    tracing::info!(%head_id, "lifecycle monitor: WebSocket stream ended");
+    Ok(MonitorExit::Disconnected)
 }
 
 async fn auto_commit_empty(state: &Arc<AppState>, head_id: Uuid) {
@@ -257,7 +243,6 @@ async fn auto_commit_empty(state: &Arc<AppState>, head_id: Uuid) {
         let http_url = node_http_url(state, head_id, i).await;
         let commit_url = format!("{http_url}/commit");
 
-        // Step 1: Get the signed commit transaction from hydra-node
         let commit_resp = match client.post(&commit_url).json(&json!({})).send().await {
             Ok(resp) => resp,
             Err(e) => {
@@ -292,7 +277,6 @@ async fn auto_commit_empty(state: &Arc<AppState>, head_id: Uuid) {
         let tx_id = commit_tx.get("txId").and_then(|v| v.as_str()).unwrap_or("unknown");
         tracing::info!(%head_id, node_index = i, %tx_id, "got signed commit tx, submitting to L1");
 
-        // Step 2: Submit the signed tx to Cardano L1 via Blockfrost
         let cbor_bytes = match hex::decode(cbor_hex) {
             Ok(b) => b,
             Err(e) => {
@@ -301,12 +285,10 @@ async fn auto_commit_empty(state: &Arc<AppState>, head_id: Uuid) {
             }
         };
 
-        let blockfrost_url = format!(
-            "https://cardano-preprod.blockfrost.io/api/v0/tx/submit"
-        );
+        let blockfrost_url = "https://cardano-preprod.blockfrost.io/api/v0/tx/submit";
 
         match client
-            .post(&blockfrost_url)
+            .post(blockfrost_url)
             .header("project_id", &state.config.blockfrost_project_id)
             .header("Content-Type", "application/cbor")
             .body(cbor_bytes)
@@ -329,17 +311,26 @@ async fn auto_commit_empty(state: &Arc<AppState>, head_id: Uuid) {
     }
 }
 
+/// Send a command to the hydra-node via WebSocket (used by Close endpoint).
 pub async fn send_hydra_command(
     state: &Arc<AppState>,
     head_id: Uuid,
     command: &str,
 ) -> anyhow::Result<()> {
-    let http_url = node_http_url(state, head_id, 0).await;
-    let url = format!("{http_url}/{}", command.to_lowercase());
+    let ws_url = state
+        .orchestrator
+        .get_node_ws_url(head_id, 0)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
-    let client = reqwest::Client::new();
-    let resp = client.post(&url).send().await?;
+    let (ws_stream, _) = connect_async(&ws_url).await?;
+    let (mut tx, _rx) = ws_stream.split();
 
-    tracing::info!(%head_id, command, status = %resp.status(), "sent hydra command");
+    use futures_util::SinkExt;
+    let msg = json!({"tag": command});
+    tx.send(tokio_tungstenite::tungstenite::Message::text(msg.to_string()))
+        .await?;
+
+    tracing::info!(%head_id, command, "sent hydra command via WebSocket");
     Ok(())
 }

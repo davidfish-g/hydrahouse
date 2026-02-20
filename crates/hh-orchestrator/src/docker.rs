@@ -229,10 +229,13 @@ impl Orchestrator for DockerOrchestrator {
             let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
             tracing::info!(%head_id, %container, container_id = %&container_id[..12], "container started");
 
-            // Store the verification key CBOR hex so the user can derive the address
-            // (actual bech32 address derivation needs cardano-cli or a library)
             let vk_cbor = &cardano_keys[i as usize].verification_key.cbor_hex;
-            let cardano_addr = format!("vk_cbor:{vk_cbor}");
+            let is_testnet = network != Network::Mainnet;
+            let cardano_addr = hh_keys::bech32::vk_cbor_to_address(vk_cbor, is_testnet)
+                .unwrap_or_else(|e| {
+                    tracing::warn!(%head_id, error = %e, "failed to derive bech32 address, falling back");
+                    format!("vk_cbor:{vk_cbor}")
+                });
 
             nodes.push(ProvisionedNode {
                 pod_name: container,
