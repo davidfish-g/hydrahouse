@@ -1,4 +1,4 @@
-use k8s_openapi::api::core::v1::Secret;
+use k8s_openapi::api::core::v1::{ConfigMap, Secret};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use k8s_openapi::ByteString;
 use kube::api::{Api, DeleteParams, PostParams};
@@ -109,5 +109,44 @@ pub async fn delete_secrets_for_head(
     }
     let _ = secrets.delete(&blockfrost_secret_name(head_id), &dp).await;
 
+    Ok(())
+}
+
+/// Build a K8s ConfigMap containing protocol-parameters.json for hydra-node.
+pub fn build_protocol_params_configmap(head_id: Uuid, content: &str) -> ConfigMap {
+    ConfigMap {
+        metadata: ObjectMeta {
+            name: Some(protocol_params_configmap_name(head_id)),
+            labels: Some(BTreeMap::from([
+                ("app".into(), "hydrahouse".into()),
+                ("head-id".into(), head_id.to_string()),
+            ])),
+            ..Default::default()
+        },
+        data: Some(BTreeMap::from([(
+            "protocol-parameters.json".into(),
+            content.into(),
+        )])),
+        ..Default::default()
+    }
+}
+
+pub async fn create_configmap(
+    client: &Client,
+    namespace: &str,
+    cm: &ConfigMap,
+) -> anyhow::Result<()> {
+    let cms: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
+    cms.create(&PostParams::default(), cm).await?;
+    Ok(())
+}
+
+pub async fn delete_configmap(
+    client: &Client,
+    namespace: &str,
+    name: &str,
+) -> anyhow::Result<()> {
+    let cms: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
+    let _ = cms.delete(name, &DeleteParams::default()).await;
     Ok(())
 }

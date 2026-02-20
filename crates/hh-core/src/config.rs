@@ -9,7 +9,6 @@ pub enum OrchestratorMode {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
-    #[serde(default = "default_database_url")]
     pub database_url: String,
 
     #[serde(default = "default_listen_addr")]
@@ -30,15 +29,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub blockfrost_project_id: String,
 
-    #[serde(default)]
-    pub hydra_scripts_tx_id: String,
-
     #[serde(default = "default_hydra_node_image")]
     pub hydra_node_image: String,
-}
-
-fn default_database_url() -> String {
-    "postgres://hydrahouse:hydrahouse@localhost:5432/hydrahouse".into()
 }
 
 fn default_listen_addr() -> String {
@@ -69,7 +61,7 @@ impl AppConfig {
     pub fn from_env() -> Self {
         Self {
             database_url: std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| default_database_url()),
+                .expect("DATABASE_URL must be set"),
             listen_addr: std::env::var("HH_LISTEN_ADDR")
                 .unwrap_or_else(|_| default_listen_addr()),
             ws_base_url: std::env::var("HH_WS_BASE_URL")
@@ -87,8 +79,6 @@ impl AppConfig {
             data_dir: std::env::var("HH_DATA_DIR")
                 .unwrap_or_else(|_| default_data_dir()),
             blockfrost_project_id: std::env::var("HH_BLOCKFROST_PROJECT_ID")
-                .unwrap_or_default(),
-            hydra_scripts_tx_id: std::env::var("HH_HYDRA_SCRIPTS_TX_ID")
                 .unwrap_or_default(),
             hydra_node_image: std::env::var("HH_HYDRA_NODE_IMAGE")
                 .unwrap_or_else(|_| default_hydra_node_image()),

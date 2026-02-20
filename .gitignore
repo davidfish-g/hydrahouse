@@ -1,2 +1,20 @@
+# Build artifacts
+/target/
+
+# Environment & secrets
 .env
+.env.*
+!.env.example
+
+# Local data
 .hydrahouse-data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

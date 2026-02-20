@@ -1,6 +1,6 @@
 use k8s_openapi::api::core::v1::{
-    Container, ContainerPort, Pod, PodSpec, SecretVolumeSource, Service, ServicePort, ServiceSpec,
-    Volume, VolumeMount,
+    ConfigMapVolumeSource, Container, ContainerPort, EmptyDirVolumeSource, Pod, PodSpec,
+    SecretVolumeSource, Service, ServicePort, ServiceSpec, Volume, VolumeMount,
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
@@ -36,6 +36,7 @@ pub fn build_pod(
     args: Vec<String>,
     keys_secret_name: &str,
     blockfrost_secret_name: &str,
+    protocol_params_configmap_name: &str,
 ) -> Pod {
     Pod {
         metadata: ObjectMeta {
@@ -78,6 +79,17 @@ pub fn build_pod(
                         read_only: Some(true),
                         ..Default::default()
                     },
+                    VolumeMount {
+                        name: "protocol-params".into(),
+                        mount_path: "/config".into(),
+                        read_only: Some(true),
+                        ..Default::default()
+                    },
+                    VolumeMount {
+                        name: "persistence".into(),
+                        mount_path: "/data/persistence".into(),
+                        ..Default::default()
+                    },
                 ]),
                 ..Default::default()
             }],
@@ -96,6 +108,19 @@ pub fn build_pod(
                         secret_name: Some(blockfrost_secret_name.into()),
                         ..Default::default()
                     }),
+                    ..Default::default()
+                },
+                Volume {
+                    name: "protocol-params".into(),
+                    config_map: Some(ConfigMapVolumeSource {
+                        name: protocol_params_configmap_name.into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Volume {
+                    name: "persistence".into(),
+                    empty_dir: Some(EmptyDirVolumeSource::default()),
                     ..Default::default()
                 },
             ]),

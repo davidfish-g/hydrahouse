@@ -45,7 +45,6 @@ pub struct K8sOrchestrator {
     pub client: kube::Client,
     pub namespace: String,
     pub blockfrost_project_id: String,
-    pub hydra_scripts_tx_id: String,
     pub hydra_node_image: String,
 }
 
@@ -77,14 +76,26 @@ impl Orchestrator for K8sOrchestrator {
 
         let bf_secret_name = super::secrets::blockfrost_secret_name(head_id);
 
-        // 3. For each participant, create key secret, pod, and service
+        // 3. Create protocol-parameters ConfigMap
+        let protocol_params_path = std::path::Path::new("config/protocol-parameters.json");
+        let protocol_params_content = std::fs::read_to_string(protocol_params_path)
+            .map_err(|e| hh_core::error::HydraHouseError::Orchestration(format!(
+                "read config/protocol-parameters.json: {e}"
+            )))?;
+        let pp_cm = super::secrets::build_protocol_params_configmap(head_id, &protocol_params_content);
+        super::secrets::create_configmap(&self.client, &self.namespace, &pp_cm)
+            .await
+            .map_err(err)?;
+        let pp_cm_name = super::secrets::protocol_params_configmap_name(head_id);
+
+        // 4. For each participant, create key secret, pod, and service
         let mut nodes = Vec::new();
+        let contestation_secs = config.contestation_period_secs;
 
         for i in 0..participant_count {
             let pod_name = super::pods::pod_name(head_id, i);
             let svc_name = super::pods::service_name(head_id, i);
 
-            // Collect peer verification keys (everyone except self)
             let cardano_peer_vks: Vec<String> = cardano_keys
                 .iter()
                 .enumerate()
@@ -118,33 +129,27 @@ impl Orchestrator for K8sOrchestrator {
                 .await
                 .map_err(err)?;
 
-            // Build hydra-node CLI arguments
-            let mut peer_addrs = Vec::new();
-            for j in 0..participant_count {
-                if j != i {
-                    let peer_svc = super::pods::service_name(head_id, j);
-                    peer_addrs.push(format!(
-                        "{peer_svc}.{ns}.svc.cluster.local:5001",
-                        ns = self.namespace
-                    ));
-                }
-            }
+            let advertise_addr = format!(
+                "{svc_name}.{ns}.svc.cluster.local:5001",
+                ns = self.namespace
+            );
 
-            let mut args = vec![
+            let mut args: Vec<String> = vec![
                 format!("--node-id={pod_name}"),
                 "--api-host=0.0.0.0".into(),
                 "--api-port=4001".into(),
-                format!(
-                    "--listen={svc_name}.{ns}.svc.cluster.local:5001",
-                    ns = self.namespace
-                ),
+                format!("--listen=0.0.0.0:5001"),
+                format!("--advertise={advertise_addr}"),
                 "--monitoring-port=6001".into(),
                 "--blockfrost=/blockfrost/blockfrost-project.txt".into(),
-                format!("--cardano-signing-key=/keys/cardano.sk"),
-                format!("--hydra-signing-key=/keys/hydra.sk"),
+                format!("--network={}", network),
+                "--cardano-signing-key=/keys/cardano.sk".into(),
+                "--hydra-signing-key=/keys/hydra.sk".into(),
+                format!("--contestation-period={contestation_secs}s"),
+                "--ledger-protocol-parameters=/config/protocol-parameters.json".into(),
+                "--persistence-dir=/data/persistence".into(),
             ];
 
-            // Add peer verification keys
             for p in 0..cardano_peer_vks.len() {
                 args.push(format!("--cardano-verification-key=/keys/cardano-peer-{p}.vk"));
             }
@@ -152,28 +157,14 @@ impl Orchestrator for K8sOrchestrator {
                 args.push(format!("--hydra-verification-key=/keys/hydra-peer-{p}.vk"));
             }
 
-            for peer in &peer_addrs {
-                args.push(format!("--peer={peer}"));
-            }
-
-            if let Some(magic) = network.testnet_magic() {
-                args.push(format!("--testnet-magic={magic}"));
-            } else {
-                args.push("--mainnet".into());
-            }
-
-            args.push(format!(
-                "--contestation-period={}s",
-                config.contestation_period_secs
-            ));
-
-            if !self.hydra_scripts_tx_id.is_empty() {
-                args.push(format!(
-                    "--hydra-scripts-tx-id={}",
-                    self.hydra_scripts_tx_id
-                ));
-            } else {
-                args.push(format!("--network={}", network));
+            for j in 0..participant_count {
+                if j != i {
+                    let peer_svc = super::pods::service_name(head_id, j);
+                    args.push(format!(
+                        "--peer={peer_svc}.{ns}.svc.cluster.local:5001",
+                        ns = self.namespace
+                    ));
+                }
             }
 
             let pod = super::pods::build_pod(
@@ -183,6 +174,7 @@ impl Orchestrator for K8sOrchestrator {
                 args,
                 &keys_secret_name,
                 &bf_secret_name,
+                &pp_cm_name,
             );
             let svc = super::pods::build_service(head_id, i);
 
@@ -193,11 +185,10 @@ impl Orchestrator for K8sOrchestrator {
                 .await
                 .map_err(err)?;
 
-            // Derive a placeholder address from the VK cbor hex
-            let cardano_addr = format!(
-                "addr_hydrahouse_{}_{i}",
-                &head_id.as_simple().to_string()[..8]
-            );
+            let vk_cbor = &cardano_keys[i as usize].verification_key.cbor_hex;
+            let is_testnet = network != Network::Mainnet;
+            let cardano_addr = hh_keys::bech32::vk_cbor_to_address(vk_cbor, is_testnet)
+                .unwrap_or_else(|_| format!("vk_cbor:{vk_cbor}"));
 
             nodes.push(ProvisionedNode {
                 pod_name,
@@ -218,9 +209,16 @@ impl Orchestrator for K8sOrchestrator {
         head_id: Uuid,
         node_count: u32,
     ) -> Result<(), hh_core::error::HydraHouseError> {
+        let err = |e: anyhow::Error| hh_core::error::HydraHouseError::Orchestration(e.to_string());
         super::pods::delete_head_resources(&self.client, &self.namespace, head_id, node_count)
             .await
-            .map_err(|e| hh_core::error::HydraHouseError::Orchestration(e.to_string()))?;
+            .map_err(err)?;
+        let _ = super::secrets::delete_configmap(
+            &self.client,
+            &self.namespace,
+            &super::secrets::protocol_params_configmap_name(head_id),
+        )
+        .await;
         Ok(())
     }
 
