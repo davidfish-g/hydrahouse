@@ -1,0 +1,14 @@
+[package]
+name = "hh-db"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hh-core = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
