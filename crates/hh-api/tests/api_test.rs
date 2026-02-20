@@ -178,7 +178,7 @@ async fn test_create_and_get_head() {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     let get_req = Request::builder()
-        .uri(&format!("/v1/heads/{}", head_id))
+        .uri(format!("/v1/heads/{}", head_id))
         .method("GET")
         .header("Authorization", "Bearer hh_sk_test_key_12345")
         .body(Body::empty())
