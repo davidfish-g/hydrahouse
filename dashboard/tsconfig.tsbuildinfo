@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/auth.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/createheadmodal.tsx","./src/components/layout.tsx","./src/components/lifecyclebar.tsx","./src/components/participantcard.tsx","./src/components/statusbadge.tsx","./src/pages/headdetail.tsx","./src/pages/headslist.tsx","./src/pages/login.tsx"],"version":"5.9.3"}
