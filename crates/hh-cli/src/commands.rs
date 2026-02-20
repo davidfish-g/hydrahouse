@@ -166,7 +166,7 @@ pub async fn run(client: ApiClient, cmd: Command) -> anyhow::Result<()> {
                 if heads.is_empty() {
                     println!("No heads found.");
                 } else {
-                    println!("{:<38} {:<12} {:<10} {}", "HEAD ID", "NETWORK", "STATUS", "CREATED");
+                    println!("{:<38} {:<12} {:<10} CREATED", "HEAD ID", "NETWORK", "STATUS");
                     for h in heads {
                         println!(
                             "{:<38} {:<12} {:<10} {}",
