@@ -1,5 +1,7 @@
 # Build artifacts
 /target/
+/dashboard/node_modules/
+/dashboard/dist/
 
 # Environment & secrets
 .env
