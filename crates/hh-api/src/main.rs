@@ -4,7 +4,7 @@ use axum::Router;
 use tracing_subscriber::EnvFilter;
 
 use hh_api::auth;
-use hh_api::handlers::{heads, health};
+use hh_api::handlers::{accounts, heads, health, transactions};
 use hh_api::openapi;
 use hh_api::state::AppState;
 use hh_api::ws;
@@ -72,11 +72,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/heads/{id}", get(heads::get_head))
         .route("/v1/heads/{id}/close", post(heads::close_head))
         .route("/v1/heads/{id}", delete(heads::abort_head))
+        .route("/v1/heads/{id}/tx", post(transactions::submit_tx))
+        .route("/v1/heads/{id}/snapshot", get(transactions::get_snapshot))
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_auth));
 
     let app = Router::new()
         .route("/healthz", get(health::healthz))
         .route("/api-docs", get(openapi::openapi_spec))
+        .route("/v1/accounts", post(accounts::create_account))
         .route("/v1/heads/{id}/ws", get(ws::ws_proxy))
         .merge(authed_routes)
         .with_state(state)

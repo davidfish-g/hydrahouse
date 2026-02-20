@@ -12,3 +12,4 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 hex = "0.4"
+blake2 = "0.10.6"
