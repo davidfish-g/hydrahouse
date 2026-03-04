@@ -22,6 +22,8 @@ HydraHouse is a managed Hydra Head orchestration platform for Cardano, structure
 - **Environment variables**: The API requires `DATABASE_URL`. A `.env` file in the project root is loaded by `dotenvy` at startup. Minimum: `DATABASE_URL=postgres://hydrahouse:hydrahouse@localhost:5432/hydrahouse`.
 - **Migrations**: Handled automatically by `hh-api` on startup (`hh_db::run_migrations`). No manual migration step needed.
 - **Head lifecycle**: Creating a head via the API triggers Docker container provisioning for hydra-nodes. Without a real Docker socket or hydra-node image, heads will transition to "aborted" - this is expected in dev.
+- **Seed script**: `scripts/seed.sh` requires `psql`, which is not installed on the host. Use `sudo docker exec docker-postgres-1 psql -U hydrahouse -d hydrahouse -c "SQL"` to run SQL against the Postgres container instead.
+- **Bun PATH**: After installing bun, ensure `~/.bun/bin` is on PATH (e.g. `export PATH="$HOME/.bun/bin:$PATH"`).
 
 ### Standard commands
 
