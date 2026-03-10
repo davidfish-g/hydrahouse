@@ -58,7 +58,7 @@ export default function SdkGuide() {
           </svg>
         }
       >
-        <CodeBlock title="terminal">npm install @hydrahouse/sdk</CodeBlock>
+        <CodeBlock title="terminal">{`bun add @hydrahouse/sdk\n# or\nnpm install @hydrahouse/sdk`}</CodeBlock>
       </SectionCard>
 
       <SectionCard

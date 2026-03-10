@@ -37,7 +37,7 @@ cargo test -p hh-api --test api_test
 cargo clippy --workspace --all-targets
 
 # Dashboard (React/Vite/Tailwind 4)
-cd dashboard && npm run dev
+cd dashboard && bun run dev
 ```
 
 ## CI

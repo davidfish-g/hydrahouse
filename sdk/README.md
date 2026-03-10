@@ -7,6 +7,8 @@ Zero dependencies. Works with Node.js 18+ and modern browsers.
 ## Install
 
 ```bash
+bun add @hydrahouse/sdk
+# or
 npm install @hydrahouse/sdk
 ```
 
