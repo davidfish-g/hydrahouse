@@ -22,13 +22,17 @@ else
     KEY_HASH=$(printf '%s' "$API_KEY" | od -A n -t x1 | tr -d ' \n')
 fi
 
+# Compute api_key_id (SHA-256 hex of the key, for fast lookup)
+KEY_ID=$(printf '%s' "$API_KEY" | shasum -a 256 | cut -d' ' -f1)
+
 echo "==> Creating test account (hash prefix: ${KEY_HASH:0:24}...)"
 psql "$DB_URL" -c "
-INSERT INTO accounts (id, email, api_key_hash, plan, created_at)
+INSERT INTO accounts (id, email, api_key_hash, api_key_id, plan, created_at)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'dev@hydrahouse.io',
     '$KEY_HASH',
+    '$KEY_ID',
     'free',
     NOW()
 )

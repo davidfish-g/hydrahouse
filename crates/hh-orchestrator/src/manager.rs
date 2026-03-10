@@ -91,6 +91,7 @@ impl Orchestrator for K8sOrchestrator {
         // 4. For each participant, create key secret, pod, and service
         let mut nodes = Vec::new();
         let contestation_secs = config.contestation_period_secs;
+        let deposit_period_secs = config.deposit_period_secs;
 
         for i in 0..participant_count {
             let pod_name = super::pods::pod_name(head_id, i);
@@ -146,6 +147,7 @@ impl Orchestrator for K8sOrchestrator {
                 "--cardano-signing-key=/keys/cardano.sk".into(),
                 "--hydra-signing-key=/keys/hydra.sk".into(),
                 format!("--contestation-period={contestation_secs}s"),
+                format!("--deposit-period={deposit_period_secs}s"),
                 "--ledger-protocol-parameters=/config/protocol-parameters.json".into(),
                 "--persistence-dir=/data/persistence".into(),
             ];

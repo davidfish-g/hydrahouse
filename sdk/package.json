@@ -1,0 +1,19 @@
+{
+  "name": "@hydrahouse/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the HydraHouse API — manage Cardano Hydra heads",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

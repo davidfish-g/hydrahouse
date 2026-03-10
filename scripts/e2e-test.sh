@@ -37,7 +37,7 @@ fi
 # Pull hydra-node image (if not already present)
 echo ""
 echo "==> Ensuring hydra-node image is available..."
-docker pull ghcr.io/cardano-scaling/hydra-node:0.20.0 2>/dev/null || {
+docker pull ghcr.io/cardano-scaling/hydra-node:1.2.0 2>/dev/null || {
     echo "    Failed to pull image. Check your internet connection."
     exit 1
 }

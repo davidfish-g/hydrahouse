@@ -38,6 +38,39 @@ pub enum Command {
         /// Head ID
         id: String,
     },
+
+    /// Deposit funds into an open head (L1 → L2)
+    Deposit {
+        /// Head ID
+        id: String,
+        /// Participant slot index
+        #[arg(short, long, default_value = "0")]
+        slot: i32,
+    },
+
+    /// Transfer ADA between participants on L2
+    Transfer {
+        /// Head ID
+        id: String,
+        /// Sender slot index
+        #[arg(long)]
+        from: i32,
+        /// Receiver slot index
+        #[arg(long)]
+        to: i32,
+        /// Amount in lovelace
+        #[arg(long)]
+        lovelace: u64,
+    },
+
+    /// Send ADA from the platform wallet to an address
+    Fund {
+        /// Target Cardano address
+        address: String,
+        /// Amount in ADA
+        #[arg(short, long, default_value = "15")]
+        ada: u64,
+    },
 }
 
 pub struct ApiClient {
@@ -195,6 +228,72 @@ pub async fn run(client: ApiClient, cmd: Command) -> anyhow::Result<()> {
             println!("Aborting head {}...", id);
             let resp = client.delete(&format!("/v1/heads/{}", id)).await?;
             println!("Status: {}", resp["status"].as_str().unwrap_or("unknown"));
+        }
+
+        Command::Deposit { id, slot } => {
+            println!("Depositing from slot {} into head {}...", slot, id);
+            let resp = client
+                .post(&format!("/v1/heads/{}/deposit", id), &json!({ "slot": slot }))
+                .await?;
+            println!("{}", serde_json::to_string_pretty(&resp)?);
+        }
+
+        Command::Transfer {
+            id,
+            from,
+            to,
+            lovelace,
+        } => {
+            println!(
+                "Transferring {} lovelace from slot {} to slot {} in head {}...",
+                lovelace, from, to, id
+            );
+            let resp = client
+                .post(
+                    &format!("/v1/heads/{}/transfer", id),
+                    &json!({ "from": from, "to": to, "lovelace": lovelace }),
+                )
+                .await?;
+            println!("{}", serde_json::to_string_pretty(&resp)?);
+        }
+
+        Command::Fund { address, ada } => {
+            let lovelace = ada * 1_000_000;
+            println!("Funding {} with {} ADA ({} lovelace)...", address, ada, lovelace);
+
+            let network_str = std::env::var("HH_NETWORK").unwrap_or_else(|_| "preprod".into());
+            let network = match network_str.as_str() {
+                "mainnet" => hh_core::network::Network::Mainnet,
+                "preview" => hh_core::network::Network::Preview,
+                _ => hh_core::network::Network::Preprod,
+            };
+
+            let project_id = std::env::var("HH_BLOCKFROST_PROJECT_ID")
+                .expect("HH_BLOCKFROST_PROJECT_ID must be set");
+            let platform_sk = std::env::var("HH_PLATFORM_WALLET_SK")
+                .expect("HH_PLATFORM_WALLET_SK must be set");
+
+            let funder = hh_orchestrator::funding::BlockfrostFunder::new(
+                network,
+                &project_id,
+                &platform_sk,
+            )
+            .map_err(|e| anyhow::anyhow!(e))?;
+
+            let tx_hash = funder
+                .fund_single_address(&address, lovelace)
+                .await
+                .map_err(|e| anyhow::anyhow!(e))?;
+
+            println!("Funding tx submitted: {}", tx_hash);
+            println!("Waiting for confirmation...");
+
+            funder
+                .wait_for_tx_confirmation(&tx_hash)
+                .await
+                .map_err(|e| anyhow::anyhow!(e))?;
+
+            println!("Confirmed! {} now has {} ADA deposited.", address, ada);
         }
     }
     Ok(())

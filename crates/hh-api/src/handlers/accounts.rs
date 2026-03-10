@@ -17,15 +17,13 @@ pub async fn create_account(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateAccountRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let api_key = generate_api_key();
-    let key_hash = auth::hash_api_key(&api_key);
+    let account = hh_db::repo::accounts::create(&state.db, req.email.as_deref()).await?;
 
-    let account = hh_db::repo::accounts::create(
-        &state.db,
-        req.email.as_deref(),
-        &key_hash,
-    )
-    .await?;
+    // Create a default API key in the api_keys table
+    let api_key = auth::generate_api_key();
+    let key_hash = auth::hash_api_key(&api_key);
+    let key_id = auth::compute_api_key_id(&api_key);
+    hh_db::repo::api_keys::create(&state.db, account.id, "default", &key_hash, &key_id).await?;
 
     Ok(Json(json!({
         "account_id": account.id,
@@ -36,10 +34,38 @@ pub async fn create_account(
     })))
 }
 
-fn generate_api_key() -> String {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let random_bytes: [u8; 24] = rng.gen();
-    let encoded: String = random_bytes.iter().map(|b| format!("{b:02x}")).collect();
-    format!("hh_sk_{encoded}")
+/// Get account info (plan, billing status) for the authenticated account.
+pub async fn get_account(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(account): axum::Extension<crate::auth::AccountId>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let row = hh_db::repo::accounts::find_by_id(&state.db, account.0)
+        .await?
+        .ok_or_else(|| ApiError::not_found("account not found"))?;
+
+    Ok(Json(json!({
+        "account_id": row.id,
+        "plan": row.plan,
+        "balance_cents": row.balance_cents,
+        "has_billing": row.stripe_customer_id.is_some(),
+    })))
+}
+
+/// Get usage statistics for the authenticated account.
+pub async fn get_usage(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(account): axum::Extension<crate::auth::AccountId>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let summary = hh_db::repo::usage::summary_for_account(&state.db, account.0).await?;
+
+    let metrics: serde_json::Value = summary
+        .iter()
+        .map(|s| (s.metric.clone(), json!(s.total)))
+        .collect::<serde_json::Map<String, serde_json::Value>>()
+        .into();
+
+    Ok(Json(json!({
+        "account_id": account.0,
+        "usage": metrics,
+    })))
 }

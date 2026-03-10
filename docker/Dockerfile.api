@@ -19,7 +19,7 @@ COPY --from=builder /app/config/protocol-parameters.json /app/config/protocol-pa
 USER hydrahouse
 WORKDIR /app
 
-ENV LISTEN_ADDR=0.0.0.0:3000
+ENV HH_LISTEN_ADDR=0.0.0.0:3000
 EXPOSE 3000
 
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \

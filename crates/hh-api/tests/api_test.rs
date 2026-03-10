@@ -66,6 +66,12 @@ fn test_config() -> AppConfig {
         data_dir: "/tmp/hh-test".into(),
         blockfrost_project_id: "test-project".into(),
         hydra_node_image: "test-image:latest".into(),
+        platform_wallet_sk: String::new(),
+        stripe_secret_key: String::new(),
+        stripe_webhook_secret: String::new(),
+        cost_head_open_cents: 500,
+        cost_api_request_cents: 1,
+        google_client_id: String::new(),
     }
 }
 
@@ -89,10 +95,16 @@ async fn setup_app() -> Option<(Router, Arc<AppState>)> {
         return None;
     }
 
-    // Create a test account
+    // Create a test account (no key on accounts table)
+    let account = hh_db::repo::accounts::create(&pool, Some("test@test.com"))
+        .await
+        .unwrap();
+
+    // Create an API key in the api_keys table
     let api_key = "hh_sk_test_key_12345";
     let key_hash = hh_api::auth::hash_api_key(api_key);
-    let _ = hh_db::repo::accounts::create(&pool, Some("test@test.com"), &key_hash).await;
+    let key_id = hh_api::auth::compute_api_key_id(api_key);
+    let _ = hh_db::repo::api_keys::create(&pool, account.id, "test", &key_hash, &key_id).await;
 
     let state = AppState::new(pool, config, Box::new(MockOrchestrator));
 

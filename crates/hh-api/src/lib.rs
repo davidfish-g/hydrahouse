@@ -1,7 +1,9 @@
 pub mod auth;
+pub mod billing;
 pub mod error;
 pub mod handlers;
 pub mod lifecycle;
 pub mod openapi;
+pub mod ratelimit;
 pub mod state;
 pub mod ws;

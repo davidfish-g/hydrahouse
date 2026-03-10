@@ -7,8 +7,8 @@ import {
 } from "react";
 
 interface AuthContextValue {
-  apiKey: string | null;
-  login: (key: string) => void;
+  email: string | null;
+  login: (email: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -16,23 +16,32 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [apiKey, setApiKey] = useState<string | null>(() =>
-    localStorage.getItem("hh_api_key"),
+  const [email, setEmail] = useState<string | null>(() =>
+    localStorage.getItem("hh_email"),
   );
 
-  const login = useCallback((key: string) => {
-    localStorage.setItem("hh_api_key", key);
-    setApiKey(key);
+  const login = useCallback((email: string) => {
+    localStorage.setItem("hh_email", email);
+    setEmail(email);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("hh_api_key");
-    setApiKey(null);
+  const logout = useCallback(async () => {
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL ?? "";
+      await fetch(`${BASE_URL}/v1/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // ignore logout errors
+    }
+    localStorage.removeItem("hh_email");
+    setEmail(null);
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ apiKey, login, logout, isAuthenticated: !!apiKey }}
+      value={{ email, login, logout, isAuthenticated: !!email }}
     >
       {children}
     </AuthContext.Provider>

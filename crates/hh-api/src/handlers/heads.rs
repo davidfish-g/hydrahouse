@@ -21,6 +21,11 @@ pub async fn create_head(
         ));
     }
 
+    // Billing gate: check balance before provisioning (actual charge happens on HeadIsOpen).
+    if !state.config.stripe_secret_key.is_empty() {
+        crate::billing::check_sufficient_balance(&state, account.0, state.config.cost_head_open_cents).await?;
+    }
+
     let config = req.config.unwrap_or_default();
     let config_json =
         serde_json::to_value(&config).map_err(|e| ApiError::internal(e.to_string()))?;
@@ -74,41 +79,62 @@ pub async fn create_head(
                 {
                     for (idx, node) in deployment.nodes.iter().enumerate() {
                         if let Some(p) = participants.iter().find(|p| p.slot_index == idx as i32) {
-                            let _ = hh_db::repo::participants::update_keys(
+                            if let Err(e) = hh_db::repo::participants::update_keys(
                                 &db,
                                 p.id,
                                 &node.cardano_address,
                                 &node.keys_secret_ref,
                             )
-                            .await;
+                            .await
+                            {
+                                tracing::warn!(%head_id, error = %e, "failed to update participant keys");
+                            }
                         }
                     }
                 }
 
-                let _ = hh_db::repo::heads::update_status(&db, head_id, "initializing").await;
-                let _ = hh_db::repo::head_events::insert(
+                if let Err(e) = hh_db::repo::heads::update_status(&db, head_id, "initializing").await {
+                    tracing::warn!(%head_id, error = %e, "failed to update status to initializing");
+                }
+                if let Err(e) = hh_db::repo::head_events::insert(
                     &db,
                     head_id,
                     "head_provisioned",
                     &json!({ "node_count": deployment.nodes.len() }),
                 )
-                .await;
+                .await
+                {
+                    tracing::warn!(%head_id, error = %e, "failed to insert head_provisioned event");
+                }
 
-                // Start the lifecycle monitor for this head
-                crate::lifecycle::spawn_lifecycle_monitor(state_clone, head_id, 0);
+                // Start lifecycle monitor (single monitor on node 0 handles all nodes)
+                {
+                    let node_idx = 0u32;
+                    crate::lifecycle::spawn_lifecycle_monitor(
+                        state_clone.clone(),
+                        head_id,
+                        node_idx,
+                    );
+                }
 
-                tracing::info!(%head_id, "head provisioned and lifecycle monitor started");
+                tracing::info!(%head_id, participant_count, "head provisioned and lifecycle monitors started");
             }
             Err(e) => {
                 tracing::error!(%head_id, error = %e, "head provisioning failed");
-                let _ = hh_db::repo::heads::update_status(&db, head_id, "aborted").await;
-                let _ = hh_db::repo::head_events::insert(
+                let provision_err = e.to_string();
+                if let Err(e) = hh_db::repo::heads::update_status(&db, head_id, "aborted").await {
+                    tracing::warn!(%head_id, error = %e, "failed to update status to aborted");
+                }
+                if let Err(e) = hh_db::repo::head_events::insert(
                     &db,
                     head_id,
                     "provisioning_failed",
-                    &json!({ "error": e.to_string() }),
+                    &json!({ "error": provision_err }),
                 )
-                .await;
+                .await
+                {
+                    tracing::warn!(%head_id, error = %e, "failed to insert provisioning_failed event");
+                }
             }
         }
     });
@@ -158,13 +184,7 @@ pub async fn get_head(
     axum::Extension(account): axum::Extension<AccountId>,
     Path(head_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let row = hh_db::repo::heads::find_by_id(&state.db, head_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("head {head_id} not found")))?;
-
-    if row.account_id != account.0 {
-        return Err(ApiError::not_found(format!("head {head_id} not found")));
-    }
+    let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
     let participants = hh_db::repo::participants::list_by_head(&state.db, head_id).await?;
     let ws_url = format!("{}/v1/heads/{}/ws", state.config.ws_base_url, head_id);
@@ -192,13 +212,7 @@ pub async fn close_head(
     axum::Extension(account): axum::Extension<AccountId>,
     Path(head_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let row = hh_db::repo::heads::find_by_id(&state.db, head_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("head {head_id} not found")))?;
-
-    if row.account_id != account.0 {
-        return Err(ApiError::not_found(format!("head {head_id} not found")));
-    }
+    let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
     let current_status: HeadStatus = row
         .status
@@ -236,18 +250,36 @@ pub async fn close_head(
     })))
 }
 
+pub async fn get_head_events(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(account): axum::Extension<AccountId>,
+    Path(head_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let _row = super::get_owned_head(&state.db, head_id, account.0).await?;
+
+    let events = hh_db::repo::head_events::list_by_head(&state.db, head_id).await?;
+
+    let events_json: Vec<serde_json::Value> = events
+        .iter()
+        .map(|e| {
+            json!({
+                "id": e.id,
+                "event_type": e.event_type,
+                "payload": e.payload_json,
+                "created_at": e.created_at,
+            })
+        })
+        .collect();
+
+    Ok(Json(json!({ "events": events_json })))
+}
+
 pub async fn abort_head(
     State(state): State<Arc<AppState>>,
     axum::Extension(account): axum::Extension<AccountId>,
     Path(head_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let row = hh_db::repo::heads::find_by_id(&state.db, head_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("head {head_id} not found")))?;
-
-    if row.account_id != account.0 {
-        return Err(ApiError::not_found(format!("head {head_id} not found")));
-    }
+    let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
     let current_status: HeadStatus = row
         .status

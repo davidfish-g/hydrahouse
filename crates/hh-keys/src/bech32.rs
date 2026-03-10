@@ -94,6 +94,28 @@ pub fn vk_cbor_to_address(cbor_hex: &str, testnet: bool) -> Result<String, Strin
     Ok(bech32_encode(hrp, &data_5bit))
 }
 
+/// Decode a bech32 address string back to raw address bytes.
+pub fn bech32_decode_address(addr: &str) -> Result<Vec<u8>, String> {
+    let sep = addr.rfind('1').ok_or("no bech32 separator found")?;
+    let data_part = &addr[sep + 1..];
+
+    if data_part.len() < 7 {
+        return Err("bech32 data part too short".into());
+    }
+
+    let data_chars = &data_part[..data_part.len() - 6];
+    let mut values = Vec::with_capacity(data_chars.len());
+    for c in data_chars.chars() {
+        let pos = CHARSET
+            .iter()
+            .position(|&ch| ch == c as u8)
+            .ok_or_else(|| format!("invalid bech32 character: {c}"))?;
+        values.push(pos as u8);
+    }
+
+    Ok(convert_bits(&values, 5, 8, false))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,5 +126,14 @@ mod tests {
         let addr = vk_cbor_to_address(vk_cbor, true).unwrap();
         assert!(addr.starts_with("addr_test1v"));
         assert!(addr.len() > 50);
+    }
+
+    #[test]
+    fn roundtrip_address() {
+        let vk_cbor = "5820f04aa4fc28bc4dfef732bc34874cef442fedae2d7d4723583d43480ccd4392d3";
+        let addr = vk_cbor_to_address(vk_cbor, true).unwrap();
+        let bytes = bech32_decode_address(&addr).unwrap();
+        assert_eq!(bytes[0], 0x60); // testnet enterprise address header
+        assert_eq!(bytes.len(), 29);
     }
 }

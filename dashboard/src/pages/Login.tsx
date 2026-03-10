@@ -1,35 +1,57 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { validateApiKey } from "../api";
+import { googleAuth } from "../api";
+
+const GOOGLE_CLIENT_ID = "736208371429-6gungtfe3nrul24m2rqhm83ccv09i0jh.apps.googleusercontent.com";
 
 export default function Login() {
-  const [key, setKey] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = key.trim();
-    if (!trimmed.startsWith("hh_sk_")) {
-      setError("API key must start with hh_sk_");
-      return;
+  useEffect(() => {
+    function initGoogle() {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "filled_blue",
+        size: "large",
+        text: "signin_with",
+        width: 384,
+      });
     }
 
-    setLoading(true);
-    setError("");
-
-    localStorage.setItem("hh_api_key", trimmed);
-    const valid = await validateApiKey();
-
-    if (valid) {
-      login(trimmed);
-      navigate("/", { replace: true });
+    // GSI script may load after this component mounts
+    if (window.google?.accounts?.id) {
+      initGoogle();
     } else {
-      localStorage.removeItem("hh_api_key");
-      setError("Invalid API key");
+      const interval = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(interval);
+          initGoogle();
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  async function handleGoogleCallback(response: GoogleCredentialResponse) {
+    setError("");
+    setLoading(true);
+    try {
+      const result = await googleAuth(response.credential);
+      login(result.email);
+      navigate(searchParams.get("redirect") || "/heads", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
       setLoading(false);
     }
   }
@@ -46,47 +68,15 @@ export default function Login() {
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-4"
-        >
-          <div>
-            <label
-              htmlFor="api-key"
-              className="block text-sm font-medium text-slate-300 mb-1.5"
-            >
-              API Key
-            </label>
-            <input
-              id="api-key"
-              type="password"
-              placeholder="hh_sk_..."
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              autoFocus
-            />
-          </div>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-4">
+          <div ref={googleButtonRef} className="flex justify-center" />
 
-          {error && (
-            <p className="text-sm text-red-400">{error}</p>
+          {loading && (
+            <p className="text-sm text-slate-400 text-center">Signing in...</p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || !key.trim()}
-            className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {loading ? "Validating..." : "Sign in"}
-          </button>
-
-          <p className="text-xs text-slate-500 text-center">
-            Don't have a key?{" "}
-            <code className="text-slate-400">
-              curl -X POST /v1/accounts -d '{"{}"}'
-            </code>
-          </p>
-        </form>
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+        </div>
       </div>
     </div>
   );

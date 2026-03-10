@@ -13,6 +13,10 @@ pub struct DockerOrchestrator {
     pub hydra_node_image: String,
     pub blockfrost_project_id: String,
     pub network_name: String,
+    /// Platform wallet signing key cborHex for auto-funding. Empty = disabled.
+    pub platform_wallet_sk: String,
+    /// AES-256-GCM key for encrypting signing key files at rest. None = plaintext.
+    pub encryption_key: Option<[u8; 32]>,
 }
 
 impl DockerOrchestrator {
@@ -20,12 +24,20 @@ impl DockerOrchestrator {
         data_dir: PathBuf,
         hydra_node_image: String,
         blockfrost_project_id: String,
+        platform_wallet_sk: String,
     ) -> Self {
+        let encryption_key = crate::encrypt::encryption_key_from_env();
+        if encryption_key.is_some() {
+            tracing::info!("key-file encryption enabled (HH_ENCRYPTION_KEY set)");
+        }
+
         Self {
             data_dir,
             hydra_node_image,
             blockfrost_project_id,
             network_name: "hydrahouse".into(),
+            platform_wallet_sk,
+            encryption_key,
         }
     }
 
@@ -52,6 +64,16 @@ impl DockerOrchestrator {
 
     fn write_file(dir: &Path, filename: &str, content: &str) -> Result<(), HydraHouseError> {
         std::fs::write(dir.join(filename), content)
+            .map_err(|e| HydraHouseError::Orchestration(format!("write {filename}: {e}")))
+    }
+
+    fn write_key_file(&self, dir: &Path, filename: &str, content: &str) -> Result<(), HydraHouseError> {
+        let bytes = match &self.encryption_key {
+            Some(key) => crate::encrypt::encrypt(key, content.as_bytes())
+                .map_err(|e| HydraHouseError::Orchestration(format!("encrypt {filename}: {e}")))?,
+            None => content.as_bytes().to_vec(),
+        };
+        std::fs::write(dir.join(filename), bytes)
             .map_err(|e| HydraHouseError::Orchestration(format!("write {filename}: {e}")))
     }
 }
@@ -91,6 +113,40 @@ impl Orchestrator for DockerOrchestrator {
             )))?;
 
         let contestation_secs = config.contestation_period_secs;
+        let deposit_period_secs = config.deposit_period_secs;
+
+        // Derive addresses for all nodes and auto-fund them before starting containers
+        let is_testnet = network != Network::Mainnet;
+        let node_addresses: Vec<String> = cardano_keys
+            .iter()
+            .map(|kp| {
+                hh_keys::bech32::vk_cbor_to_address(&kp.verification_key.cbor_hex, is_testnet)
+                    .unwrap_or_else(|e| {
+                        tracing::warn!(%head_id, error = %e, "failed to derive address");
+                        format!("vk_cbor:{}", kp.verification_key.cbor_hex)
+                    })
+            })
+            .collect();
+
+        if !self.platform_wallet_sk.is_empty() {
+            tracing::info!(%head_id, "auto-funding node addresses with L1 fuel");
+
+            let funder = crate::funding::BlockfrostFunder::new(
+                network,
+                &self.blockfrost_project_id,
+                &self.platform_wallet_sk,
+            )
+            .map_err(|e| HydraHouseError::Orchestration(format!("init funder: {e}")))?;
+
+            funder
+                .fund_addresses(&node_addresses)
+                .await
+                .map_err(|e| HydraHouseError::Orchestration(format!("auto-fund: {e}")))?;
+
+            tracing::info!(%head_id, "auto-funding complete");
+        } else {
+            tracing::warn!(%head_id, "no platform wallet configured — nodes must be funded manually");
+        }
 
         let mut nodes = Vec::new();
 
@@ -102,13 +158,13 @@ impl Orchestrator for DockerOrchestrator {
             // Write Blockfrost project ID file
             Self::write_file(&node_dir, "blockfrost.txt", &self.blockfrost_project_id)?;
 
-            // Write this node's signing keys
-            Self::write_file(
+            // Write this node's signing keys (encrypted at rest if HH_ENCRYPTION_KEY is set)
+            self.write_key_file(
                 &node_dir,
                 "cardano.sk",
                 &serde_json::to_string_pretty(&cardano_keys[i as usize].signing_key).unwrap(),
             )?;
-            Self::write_file(
+            self.write_key_file(
                 &node_dir,
                 "hydra.sk",
                 &serde_json::to_string_pretty(&hydra_keys[i as usize].signing_key).unwrap(),
@@ -162,6 +218,7 @@ impl Orchestrator for DockerOrchestrator {
                 "--cardano-signing-key=/data/cardano.sk".into(),
                 "--hydra-signing-key=/data/hydra.sk".into(),
                 format!("--contestation-period={contestation_secs}s"),
+                format!("--deposit-period={deposit_period_secs}s"),
                 "--ledger-protocol-parameters=/data/protocol-parameters.json".into(),
                 "--persistence-dir=/data/persistence".into(),
             ];
@@ -199,6 +256,9 @@ impl Orchestrator for DockerOrchestrator {
             cmd.args(["run", "-d"]);
             cmd.args(["--name", &container]);
             cmd.args(["--network", &self.network_name]);
+            cmd.args(["--restart", "on-failure:5"]);
+            cmd.args(["--memory", "512m"]);
+            cmd.args(["--cpus", "0.5"]);
             cmd.args(["-p", &format!("{api_port}:4001")]);
             cmd.args(["-p", &format!("{peer_port}:5001")]);
             cmd.args(["-v", &format!("{}:/data", node_dir_abs.display())]);
@@ -229,13 +289,7 @@ impl Orchestrator for DockerOrchestrator {
             let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
             tracing::info!(%head_id, %container, container_id = %&container_id[..12], "container started");
 
-            let vk_cbor = &cardano_keys[i as usize].verification_key.cbor_hex;
-            let is_testnet = network != Network::Mainnet;
-            let cardano_addr = hh_keys::bech32::vk_cbor_to_address(vk_cbor, is_testnet)
-                .unwrap_or_else(|e| {
-                    tracing::warn!(%head_id, error = %e, "failed to derive bech32 address, falling back");
-                    format!("vk_cbor:{vk_cbor}")
-                });
+            let cardano_addr = node_addresses[i as usize].clone();
 
             nodes.push(ProvisionedNode {
                 pod_name: container,

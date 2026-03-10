@@ -1,24 +1,22 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
-function getApiKey(): string | null {
-  return localStorage.getItem("hh_api_key");
-}
-
 async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const key = getApiKey();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
-  if (key) headers["Authorization"] = `Bearer ${key}`;
   if (options.body) headers["Content-Type"] = "application/json";
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
 
   if (res.status === 401) {
-    localStorage.removeItem("hh_api_key");
+    localStorage.removeItem("hh_email");
     window.location.href = "/login";
     throw new Error("Unauthorized");
   }
@@ -67,7 +65,6 @@ export interface HeadDetail {
   participant_count: number;
   config: {
     contestation_period_secs: number;
-    fund_lovelace: number;
   };
   ws_url: string;
   participants: Participant[];
@@ -81,6 +78,16 @@ export interface CreateHeadRequest {
   config?: {
     contestation_period_secs?: number;
   };
+}
+
+export interface TransferRequest {
+  from: number;
+  to: number;
+  lovelace: number;
+}
+
+export interface DepositRequest {
+  slot: number;
 }
 
 // --- API calls ---
@@ -108,11 +115,190 @@ export async function abortHead(id: string): Promise<{ head_id: string; status: 
   return request(`/v1/heads/${id}`, { method: "DELETE" });
 }
 
-export async function validateApiKey(): Promise<boolean> {
-  try {
-    await request("/v1/heads");
-    return true;
-  } catch {
-    return false;
+export async function deposit(
+  id: string,
+  body: DepositRequest,
+): Promise<{ status: string; tx_id: string; slot: number; lovelace: number; message: string }> {
+  return request(`/v1/heads/${id}/deposit`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function transferL2(
+  headId: string,
+  body: TransferRequest,
+): Promise<{ status: string; from: number; to: number; lovelace: number; fee: number; hydra_response: unknown }> {
+  return request(`/v1/heads/${headId}/transfer`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function submitTx(
+  headId: string,
+  cborHex: string,
+): Promise<{ status: string; hydra_response: unknown }> {
+  return request(`/v1/heads/${headId}/tx`, {
+    method: "POST",
+    body: JSON.stringify({ cborHex }),
+  });
+}
+
+export async function getSnapshot(
+  headId: string,
+): Promise<{ head_id: string; utxo: Record<string, unknown> }> {
+  return request(`/v1/heads/${headId}/snapshot`);
+}
+
+export interface DecommitRequest {
+  slot: number;
+  lovelace: number;
+}
+
+export async function decommit(
+  headId: string,
+  body: DecommitRequest,
+): Promise<{ status: string; slot: number; lovelace: number; utxo_ref: string; message: string; hydra_response: unknown }> {
+  return request(`/v1/heads/${headId}/decommit`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getHeadEvents(
+  headId: string,
+): Promise<{ events: HeadEvent[] }> {
+  return request(`/v1/heads/${headId}/events`);
+}
+
+export interface HeadEvent {
+  id: string;
+  event_type: string;
+  payload: unknown;
+  created_at: string;
+}
+
+export interface CreateAccountRequest {
+  email?: string;
+}
+
+export interface CreateAccountResponse {
+  account_id: string;
+  api_key: string;
+  email: string | null;
+  plan: string;
+}
+
+export async function createAccount(body: CreateAccountRequest = {}): Promise<CreateAccountResponse> {
+  return request("/v1/accounts", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// --- Google Auth ---
+
+export interface GoogleAuthResponse {
+  account_id: string;
+  email: string;
+  plan: string;
+  is_new_account: boolean;
+}
+
+export async function googleAuth(idToken: string): Promise<GoogleAuthResponse> {
+  const res = await fetch(`${BASE_URL}/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
   }
+
+  return res.json();
+}
+
+// --- API Key Management ---
+
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreateApiKeyResponse {
+  id: string;
+  name: string;
+  api_key: string;
+  created_at: string;
+}
+
+export async function createApiKey(name: string): Promise<CreateApiKeyResponse> {
+  return request("/v1/account/keys", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function listApiKeys(): Promise<{ keys: ApiKeyInfo[] }> {
+  return request("/v1/account/keys");
+}
+
+export async function deleteApiKey(id: string): Promise<{ deleted: boolean }> {
+  return request(`/v1/account/keys/${id}`, { method: "DELETE" });
+}
+
+// --- Billing ---
+
+export interface AccountInfo {
+  account_id: string;
+  plan: string;
+  balance_cents: number;
+  has_billing: boolean;
+}
+
+export interface UsageResponse {
+  account_id: string;
+  usage: Record<string, number>;
+}
+
+export interface BalanceTransaction {
+  id: string;
+  amount_cents: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
+
+export async function getAccount(): Promise<AccountInfo> {
+  return request("/v1/account");
+}
+
+export async function getUsage(): Promise<UsageResponse> {
+  return request("/v1/account/usage");
+}
+
+export async function getBalanceHistory(): Promise<{ transactions: BalanceTransaction[] }> {
+  return request("/v1/account/balance/history");
+}
+
+export async function createTopUp(
+  amountCents: number,
+  successUrl: string,
+  cancelUrl: string,
+): Promise<{ url: string }> {
+  return request("/v1/billing/topup", {
+    method: "POST",
+    body: JSON.stringify({
+      amount_cents: amountCents,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    }),
+  });
 }

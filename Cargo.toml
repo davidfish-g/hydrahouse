@@ -44,6 +44,7 @@ k8s-openapi = { version = "0.24", features = ["latest"] }
 # Cryptography
 ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand = "0.8"
+aes-gcm = "0.10"
 
 # Logging & tracing
 tracing = "0.1"

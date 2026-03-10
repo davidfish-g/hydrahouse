@@ -112,12 +112,25 @@ docker build -f docker/Dockerfile.api -t hydrahouse-api .
 |--------|------|------|-------------|
 | GET | `/healthz` | No | Health check |
 | GET | `/api-docs` | No | OpenAPI 3.0 spec |
+| POST | `/v1/accounts` | No | Create account (returns API key) |
+| GET | `/v1/heads/:id/ws` | No* | WebSocket proxy to hydra-node |
+| POST | `/v1/webhooks/stripe` | No | Stripe webhook receiver |
 | POST | `/v1/heads` | Yes | Create a new Hydra head (triggers provisioning) |
 | GET | `/v1/heads` | Yes | List your heads |
 | GET | `/v1/heads/:id` | Yes | Get head details + participants |
 | POST | `/v1/heads/:id/close` | Yes | Close an open head |
 | DELETE | `/v1/heads/:id` | Yes | Abort a head |
-| GET | `/v1/heads/:id/ws` | No* | WebSocket proxy to hydra-node |
+| POST | `/v1/heads/:id/deposit` | Yes | Deposit funds L1→L2 |
+| POST | `/v1/heads/:id/decommit` | Yes | Withdraw funds L2→L1 |
+| GET | `/v1/heads/:id/events` | Yes | Get head event history |
+| POST | `/v1/heads/:id/tx` | Yes | Submit raw L2 transaction |
+| POST | `/v1/heads/:id/transfer` | Yes | Transfer ADA between participants on L2 |
+| GET | `/v1/heads/:id/snapshot` | Yes | Query L2 UTxO snapshot |
+| GET | `/v1/account` | Yes | Get account info |
+| POST | `/v1/account/rotate-key` | Yes | Rotate API key |
+| GET | `/v1/account/usage` | Yes | Get usage statistics |
+| POST | `/v1/billing/checkout` | Yes | Create Stripe checkout session |
+| POST | `/v1/billing/portal` | Yes | Create Stripe billing portal session |
 
 Auth uses `Authorization: Bearer hh_sk_...` API keys.
 

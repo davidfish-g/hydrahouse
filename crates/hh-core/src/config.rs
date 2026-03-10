@@ -31,6 +31,29 @@ pub struct AppConfig {
 
     #[serde(default = "default_hydra_node_image")]
     pub hydra_node_image: String,
+
+    /// Platform wallet signing key cborHex (e.g. "5820abcd...") for auto-funding node addresses.
+    /// If empty, auto-funding is disabled and nodes must be funded manually.
+    #[serde(default)]
+    pub platform_wallet_sk: String,
+
+    /// Stripe secret key (sk_...). If empty, billing is disabled.
+    #[serde(default)]
+    pub stripe_secret_key: String,
+
+    /// Stripe webhook signing secret (whsec_...). Required for webhook verification.
+    #[serde(default)]
+    pub stripe_webhook_secret: String,
+
+    /// Cost in cents to open a head ($5.00).
+    pub cost_head_open_cents: i64,
+
+    /// Cost in cents per API request ($0.01).
+    pub cost_api_request_cents: i64,
+
+    /// Google OAuth Client ID. If empty, Google auth is disabled.
+    #[serde(default)]
+    pub google_client_id: String,
 }
 
 fn default_listen_addr() -> String {
@@ -82,6 +105,13 @@ impl AppConfig {
                 .unwrap_or_default(),
             hydra_node_image: std::env::var("HH_HYDRA_NODE_IMAGE")
                 .unwrap_or_else(|_| default_hydra_node_image()),
+            platform_wallet_sk: std::env::var("HH_PLATFORM_WALLET_SK")
+                .unwrap_or_default(),
+            stripe_secret_key: std::env::var("STRIPE_SECRET_KEY").unwrap_or_default(),
+            stripe_webhook_secret: std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default(),
+            cost_head_open_cents: 500,
+            cost_api_request_cents: 1,
+            google_client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
         }
     }
 }

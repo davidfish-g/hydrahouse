@@ -7,6 +7,12 @@ pub struct ApiError {
     pub message: String,
 }
 
+impl std::fmt::Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.status, self.message)
+    }
+}
+
 impl ApiError {
     pub fn bad_request(msg: impl Into<String>) -> Self {
         Self {
@@ -25,6 +31,13 @@ impl ApiError {
     pub fn internal(msg: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: msg.into(),
+        }
+    }
+
+    pub fn payment_required(msg: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::PAYMENT_REQUIRED,
             message: msg.into(),
         }
     }

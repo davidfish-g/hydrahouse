@@ -17,3 +17,7 @@ anyhow = { workspace = true }
 uuid = { workspace = true }
 async-trait = "0.1"
 hex = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
+ed25519-dalek = { workspace = true }
+aes-gcm = { workspace = true }
+blake2 = "0.10"

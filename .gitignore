@@ -2,6 +2,8 @@
 /target/
 /dashboard/node_modules/
 /dashboard/dist/
+/sdk/node_modules/
+/sdk/dist/
 
 # Environment & secrets
 .env

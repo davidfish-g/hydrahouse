@@ -54,6 +54,17 @@ pub async fn list_by_account(pool: &PgPool, account_id: Uuid) -> Result<Vec<Head
     .await
 }
 
+/// Count heads that are not yet closed/aborted (concurrent head count for billing limits).
+pub async fn count_active_by_account(pool: &PgPool, account_id: Uuid) -> Result<i64, sqlx::Error> {
+    let row: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM heads WHERE account_id = $1 AND status NOT IN ('closed', 'fanned_out', 'aborted')",
+    )
+    .bind(account_id)
+    .fetch_one(pool)
+    .await?;
+    Ok(row.0)
+}
+
 /// Find all heads in active lifecycle states (need a monitor running).
 pub async fn find_active(pool: &PgPool) -> Result<Vec<HeadRow>, sqlx::Error> {
     sqlx::query_as::<_, HeadRow>(

@@ -61,19 +61,19 @@ impl std::str::FromStr for HeadStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HeadConfig {
     pub contestation_period_secs: u32,
-    #[serde(default = "default_fund_lovelace")]
-    pub fund_lovelace: u64,
+    #[serde(default = "default_deposit_period_secs")]
+    pub deposit_period_secs: u32,
 }
 
-fn default_fund_lovelace() -> u64 {
-    10_000_000
+fn default_deposit_period_secs() -> u32 {
+    120
 }
 
 impl Default for HeadConfig {
     fn default() -> Self {
         Self {
             contestation_period_secs: 300,
-            fund_lovelace: default_fund_lovelace(),
+            deposit_period_secs: 120,
         }
     }
 }
