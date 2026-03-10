@@ -9,6 +9,7 @@ import UtxoViewer from "../components/UtxoViewer";
 import EventHistory from "../components/EventHistory";
 import TxSubmitForm from "../components/TxSubmitForm";
 import TransferForm from "../components/TransferForm";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function HeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function HeadDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"close" | "abort" | null>(null);
 
   const fetchHead = useCallback(async () => {
     if (!id) return;
@@ -37,7 +39,8 @@ export default function HeadDetail() {
   }, [fetchHead]);
 
   async function handleClose() {
-    if (!id || !confirm("Close this head? This will initiate the contestation period.")) return;
+    if (!id) return;
+    setConfirmAction(null);
     setActionLoading(true);
     try {
       await closeHead(id);
@@ -50,7 +53,8 @@ export default function HeadDetail() {
   }
 
   async function handleAbort() {
-    if (!id || !confirm("Abort this head? Resources will be torn down.")) return;
+    if (!id) return;
+    setConfirmAction(null);
     setActionLoading(true);
     try {
       await abortHead(id);
@@ -114,7 +118,7 @@ export default function HeadDetail() {
           <div className="flex gap-2">
             {canClose && (
               <button
-                onClick={handleClose}
+                onClick={() => setConfirmAction("close")}
                 disabled={actionLoading}
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white text-sm rounded-lg transition-colors"
               >
@@ -123,7 +127,7 @@ export default function HeadDetail() {
             )}
             {canAbort && (
               <button
-                onClick={handleAbort}
+                onClick={() => setConfirmAction("abort")}
                 disabled={actionLoading}
                 className="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 disabled:bg-slate-600 text-white text-sm rounded-lg transition-colors"
               >
@@ -230,6 +234,24 @@ export default function HeadDetail() {
       {error && (
         <p className="text-sm text-red-400">{error}</p>
       )}
+
+      <ConfirmModal
+        open={confirmAction === "close"}
+        title="Close Head"
+        message="This will initiate the contestation period. Are you sure you want to close this head?"
+        confirmLabel="Close Head"
+        confirmClassName="bg-blue-600 hover:bg-blue-500"
+        onConfirm={handleClose}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ConfirmModal
+        open={confirmAction === "abort"}
+        title="Abort Head"
+        message="Resources will be torn down and this action cannot be undone. Are you sure?"
+        confirmLabel="Abort"
+        onConfirm={handleAbort}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   );
 }

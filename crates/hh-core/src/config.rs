@@ -54,6 +54,10 @@ pub struct AppConfig {
     /// Google OAuth Client ID. If empty, Google auth is disabled.
     #[serde(default)]
     pub google_client_id: String,
+
+    /// Comma-separated list of allowed CORS origins. Falls back to localhost for dev.
+    #[serde(default)]
+    pub cors_origins: Vec<String>,
 }
 
 fn default_listen_addr() -> String {
@@ -112,6 +116,10 @@ impl AppConfig {
             cost_head_open_cents: 500,
             cost_api_request_cents: 1,
             google_client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
+            cors_origins: std::env::var("HH_CORS_ORIGINS")
+                .ok()
+                .map(|s| s.split(',').map(|o| o.trim().to_string()).filter(|o| !o.is_empty()).collect())
+                .unwrap_or_default(),
         }
     }
 }

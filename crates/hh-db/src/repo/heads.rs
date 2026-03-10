@@ -46,10 +46,21 @@ pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<Option<HeadRow>, sqlx
 }
 
 pub async fn list_by_account(pool: &PgPool, account_id: Uuid) -> Result<Vec<HeadRow>, sqlx::Error> {
+    list_by_account_paginated(pool, account_id, 50, 0).await
+}
+
+pub async fn list_by_account_paginated(
+    pool: &PgPool,
+    account_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<HeadRow>, sqlx::Error> {
     sqlx::query_as::<_, HeadRow>(
-        "SELECT id, account_id, network, status, participant_count, config_json, created_at, closed_at FROM heads WHERE account_id = $1 ORDER BY created_at DESC",
+        "SELECT id, account_id, network, status, participant_count, config_json, created_at, closed_at FROM heads WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
     )
     .bind(account_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(pool)
     .await
 }

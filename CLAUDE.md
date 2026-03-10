@@ -75,7 +75,7 @@ hh-api (axum server + CLI entry) → hh-orchestrator → hh-keys
 
 - `sdk/` -- TypeScript SDK for the API (work in progress)
 - `deploy/` -- Kubernetes deployment manifests and Helm charts
-- `scripts/` -- Utility scripts (seed.sh, e2e-test.sh, gen_platform_wallet.sh)
+- `scripts/` -- Utility scripts (seed.sh, e2e-test.sh)
 
 ### Dashboard
 

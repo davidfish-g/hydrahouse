@@ -14,6 +14,14 @@ import type {
   SubmitTxResponse,
   SnapshotResponse,
   HydraHouseClientOptions,
+  AccountInfo,
+  UsageResponse,
+  HeadEventsResponse,
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+  TopUpResponse,
+  BalanceHistoryResponse,
+  PaginationParams,
 } from "./types.js";
 
 export class HydraHouseError extends Error {
@@ -107,6 +115,68 @@ export class HydraHouseClient {
     );
   }
 
+  // ---- Account ----
+
+  async getAccount(): Promise<AccountInfo> {
+    return this.request("GET", "/v1/account");
+  }
+
+  async getUsage(): Promise<UsageResponse> {
+    return this.request("GET", "/v1/account/usage");
+  }
+
+  // ---- Head Events ----
+
+  async getHeadEvents(
+    headId: string,
+    params?: PaginationParams,
+  ): Promise<HeadEventsResponse> {
+    const query = this.buildQuery(params);
+    return this.request(
+      "GET",
+      `/v1/heads/${encodeURIComponent(headId)}/events${query}`,
+    );
+  }
+
+  // ---- API Keys ----
+
+  async createApiKey(name: string): Promise<CreateApiKeyResponse> {
+    return this.request("POST", "/v1/account/keys", {
+      body: { name },
+    });
+  }
+
+  async listApiKeys(): Promise<ListApiKeysResponse> {
+    return this.request("GET", "/v1/account/keys");
+  }
+
+  async deleteApiKey(id: string): Promise<{ deleted: boolean }> {
+    return this.request(
+      "DELETE",
+      `/v1/account/keys/${encodeURIComponent(id)}`,
+    );
+  }
+
+  // ---- Billing ----
+
+  async createTopup(
+    amountCents: number,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<TopUpResponse> {
+    return this.request("POST", "/v1/billing/topup", {
+      body: {
+        amount_cents: amountCents,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      },
+    });
+  }
+
+  async getBalanceHistory(): Promise<BalanceHistoryResponse> {
+    return this.request("GET", "/v1/account/balance/history");
+  }
+
   // ---- WebSocket ----
 
   connectWebSocket(headId: string): WebSocket {
@@ -158,5 +228,20 @@ export class HydraHouseClient {
     }
 
     return (await res.json()) as T;
+  }
+
+  private buildQuery(params?: Record<string, unknown>): string {
+    if (!params) return "";
+    const entries = Object.entries(params).filter(
+      ([, v]) => v !== undefined && v !== null,
+    );
+    if (entries.length === 0) return "";
+    const qs = entries
+      .map(
+        ([k, v]) =>
+          `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+      )
+      .join("&");
+    return `?${qs}`;
   }
 }

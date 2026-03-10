@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
@@ -39,7 +40,9 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <Layout />
+                <ErrorBoundary>
+                  <Layout />
+                </ErrorBoundary>
               </RequireAuth>
             }
           >

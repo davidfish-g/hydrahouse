@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth";
 
@@ -22,6 +22,23 @@ export default function Layout() {
   const location = useLocation();
   const isDocsPage = location.pathname.startsWith("/docs");
   const [docsOpen, setDocsOpen] = useState(isDocsPage);
+  const [connected, setConnected] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const base = import.meta.env.VITE_API_URL ?? "";
+        const res = await fetch(`${base}/healthz`, { method: "GET" });
+        setConnected(res.ok);
+      } catch {
+        setConnected(false);
+      }
+    };
+    checkHealth();
+    intervalRef.current = setInterval(checkHealth, 30_000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
 
   return (
     <div className="flex h-screen">
@@ -75,7 +92,7 @@ export default function Layout() {
         </nav>
         <div className="p-3 border-t border-slate-700">
           <button
-            onClick={logout}
+            onClick={() => { logout(); window.location.href = "/"; }}
             className="w-full px-3 py-2 text-sm text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors text-left"
           >
             Sign out
@@ -92,7 +109,10 @@ export default function Layout() {
             <span className="text-xs text-slate-400">
               {email}
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Connected" />
+            <span
+              className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
+              title={connected ? "Connected" : "Disconnected"}
+            />
           </div>
         </header>
 

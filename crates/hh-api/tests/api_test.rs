@@ -72,6 +72,7 @@ fn test_config() -> AppConfig {
         cost_head_open_cents: 500,
         cost_api_request_cents: 1,
         google_client_id: String::new(),
+        cors_origins: vec![],
     }
 }
 

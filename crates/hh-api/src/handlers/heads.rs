@@ -1,5 +1,6 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -9,6 +10,12 @@ use hh_core::head::{CreateHeadRequest, HeadStatus};
 use crate::auth::AccountId;
 use crate::error::ApiError;
 use crate::state::AppState;
+
+#[derive(Debug, Deserialize)]
+pub struct PaginationParams {
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
 
 pub async fn create_head(
     State(state): State<Arc<AppState>>,
@@ -159,8 +166,14 @@ pub async fn create_head(
 pub async fn list_heads(
     State(state): State<Arc<AppState>>,
     axum::Extension(account): axum::Extension<AccountId>,
+    Query(pagination): Query<PaginationParams>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let rows = hh_db::repo::heads::list_by_account(&state.db, account.0).await?;
+    let limit = pagination.limit.unwrap_or(50).clamp(1, 100);
+    let offset = pagination.offset.unwrap_or(0).max(0);
+
+    let rows =
+        hh_db::repo::heads::list_by_account_paginated(&state.db, account.0, limit, offset)
+            .await?;
 
     let heads: Vec<serde_json::Value> = rows
         .iter()
@@ -176,7 +189,7 @@ pub async fn list_heads(
         })
         .collect();
 
-    Ok(Json(json!({ "heads": heads })))
+    Ok(Json(json!({ "heads": heads, "limit": limit, "offset": offset })))
 }
 
 pub async fn get_head(
@@ -254,10 +267,16 @@ pub async fn get_head_events(
     State(state): State<Arc<AppState>>,
     axum::Extension(account): axum::Extension<AccountId>,
     Path(head_id): Path<Uuid>,
+    Query(pagination): Query<PaginationParams>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let _row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
-    let events = hh_db::repo::head_events::list_by_head(&state.db, head_id).await?;
+    let limit = pagination.limit.unwrap_or(50).clamp(1, 100);
+    let offset = pagination.offset.unwrap_or(0).max(0);
+
+    let events =
+        hh_db::repo::head_events::list_by_head_paginated(&state.db, head_id, limit, offset)
+            .await?;
 
     let events_json: Vec<serde_json::Value> = events
         .iter()
@@ -271,7 +290,7 @@ pub async fn get_head_events(
         })
         .collect();
 
-    Ok(Json(json!({ "events": events_json })))
+    Ok(Json(json!({ "events": events_json, "limit": limit, "offset": offset })))
 }
 
 pub async fn abort_head(

@@ -2,6 +2,7 @@
 /target/
 /dashboard/node_modules/
 /dashboard/dist/
+*.tsbuildinfo
 /sdk/node_modules/
 /sdk/dist/
 

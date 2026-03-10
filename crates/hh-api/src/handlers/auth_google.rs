@@ -118,10 +118,16 @@ pub async fn google_auth(
     hh_db::repo::sessions::create(&state.db, account.id, &token_id, expires_at).await?;
 
     // Build Set-Cookie header
+    let secure_flag = if state.config.listen_addr.contains("localhost") || state.config.listen_addr.starts_with("127.") {
+        ""
+    } else {
+        " Secure;"
+    };
     let cookie_value = format!(
-        "{}={}; HttpOnly; SameSite=Lax; Path=/; Max-Age={}",
+        "{}={};{} HttpOnly; SameSite=Lax; Path=/; Max-Age={}",
         auth::session_cookie_name(),
         session_token,
+        secure_flag,
         7 * 24 * 3600,
     );
 
@@ -154,7 +160,7 @@ pub async fn logout(
 
     // Clear the cookie
     let clear_cookie = format!(
-        "{}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+        "{}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0; Secure",
         auth::session_cookie_name(),
     );
 

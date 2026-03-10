@@ -25,18 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEmail(email);
   }, []);
 
-  const logout = useCallback(async () => {
-    try {
-      const BASE_URL = import.meta.env.VITE_API_URL ?? "";
-      await fetch(`${BASE_URL}/v1/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // ignore logout errors
-    }
+  const logout = useCallback(() => {
     localStorage.removeItem("hh_email");
     setEmail(null);
+    // Fire-and-forget server-side session cleanup
+    const BASE_URL = import.meta.env.VITE_API_URL ?? "";
+    fetch(`${BASE_URL}/v1/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
   }, []);
 
   return (

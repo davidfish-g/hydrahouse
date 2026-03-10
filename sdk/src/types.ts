@@ -125,3 +125,70 @@ export interface HydraHouseClientOptions {
   baseUrl: string;
   apiKey?: string;
 }
+
+// --- Account & Billing types ---
+
+export interface AccountInfo {
+  account_id: string;
+  plan: string;
+  balance_cents: number;
+  has_billing: boolean;
+}
+
+export interface UsageResponse {
+  account_id: string;
+  usage: Record<string, number>;
+}
+
+export interface HeadEvent {
+  id: string;
+  event_type: string;
+  payload: unknown;
+  created_at: string;
+}
+
+export interface HeadEventsResponse {
+  events: HeadEvent[];
+  limit: number;
+  offset: number;
+}
+
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreateApiKeyResponse {
+  id: string;
+  name: string;
+  api_key: string;
+  created_at: string;
+}
+
+export interface ListApiKeysResponse {
+  keys: ApiKeyInfo[];
+}
+
+export interface TopUpResponse {
+  url: string;
+}
+
+export interface BalanceTransaction {
+  id: string;
+  amount_cents: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
+
+export interface BalanceHistoryResponse {
+  transactions: BalanceTransaction[];
+}
+
+export interface PaginationParams {
+  limit?: number;
+  offset?: number;
+}

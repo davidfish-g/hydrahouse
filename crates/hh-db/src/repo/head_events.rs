@@ -32,10 +32,21 @@ pub async fn insert(
 }
 
 pub async fn list_by_head(pool: &PgPool, head_id: Uuid) -> Result<Vec<HeadEventRow>, sqlx::Error> {
+    list_by_head_paginated(pool, head_id, 50, 0).await
+}
+
+pub async fn list_by_head_paginated(
+    pool: &PgPool,
+    head_id: Uuid,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<HeadEventRow>, sqlx::Error> {
     sqlx::query_as::<_, HeadEventRow>(
-        "SELECT id, head_id, event_type, payload_json, created_at FROM head_events WHERE head_id = $1 ORDER BY created_at",
+        "SELECT id, head_id, event_type, payload_json, created_at FROM head_events WHERE head_id = $1 ORDER BY created_at LIMIT $2 OFFSET $3",
     )
     .bind(head_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(pool)
     .await
 }

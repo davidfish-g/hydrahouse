@@ -104,13 +104,37 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/account/balance/history", get(billing::get_balance_history))
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_auth));
 
-    let rate_limiter = hh_api::ratelimit::RateLimiter::new(120); // 120 req/min per key
+    let rate_limiter = hh_api::ratelimit::RateLimiter::new(500);
 
-    let cors = CorsLayer::new()
-        .allow_origin([
+    let origins: Vec<axum::http::HeaderValue> = if config.cors_origins.is_empty() {
+        tracing::info!("HH_CORS_ORIGINS not set, allowing localhost origins (dev mode)");
+        vec![
             "http://localhost:5173".parse().unwrap(),
             "http://localhost:3000".parse().unwrap(),
-        ])
+        ]
+    } else {
+        let mut parsed = Vec::new();
+        for origin in &config.cors_origins {
+            match origin.parse() {
+                Ok(v) => parsed.push(v),
+                Err(_) => {
+                    tracing::error!(origin = %origin, "invalid CORS origin, skipping");
+                }
+            }
+        }
+        if parsed.is_empty() {
+            tracing::error!("HH_CORS_ORIGINS set but all origins invalid, falling back to localhost");
+            vec![
+                "http://localhost:5173".parse().unwrap(),
+                "http://localhost:3000".parse().unwrap(),
+            ]
+        } else {
+            parsed
+        }
+    };
+
+    let cors = CorsLayer::new()
+        .allow_origin(origins)
         .allow_credentials(true)
         .allow_methods([
             axum::http::Method::GET,
