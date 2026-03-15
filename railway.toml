@@ -1,0 +1,5 @@
+[build]
+buildCommand = "cargo build --release -p hh-api"
+
+[deploy]
+startCommand = "./target/release/hh-api"
