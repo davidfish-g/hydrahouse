@@ -45,12 +45,15 @@ pub async fn deposit(
         .ok_or_else(|| ApiError::internal("participant has no cardano address"))?;
 
     let bf_base = crate::lifecycle::blockfrost_base_url(&row.network);
+    let bf_project_id = row.network.parse::<hh_core::network::Network>().ok()
+        .and_then(|n| state.config.blockfrost_project_id(n))
+        .ok_or_else(|| ApiError::internal(format!("no Blockfrost project ID for network {}", row.network)))?;
     let client = reqwest::Client::new();
 
     let utxos_url = format!("{bf_base}/addresses/{node_addr}/utxos");
     let utxos_resp = client
         .get(&utxos_url)
-        .header("project_id", &state.config.blockfrost_project_id)
+        .header("project_id", bf_project_id)
         .send()
         .await
         .map_err(|e| ApiError::internal(format!("failed to query Blockfrost: {e}")))?;
@@ -165,7 +168,7 @@ pub async fn deposit(
     let bf_submit = format!("{bf_base}/tx/submit");
     let submit_resp = client
         .post(&bf_submit)
-        .header("project_id", &state.config.blockfrost_project_id)
+        .header("project_id", bf_project_id)
         .header("Content-Type", "application/cbor")
         .body(cbor_bytes)
         .send()

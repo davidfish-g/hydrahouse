@@ -479,6 +479,9 @@ async fn auto_commit(state: &Arc<AppState>, head_id: Uuid) {
 
     let bf_base = blockfrost_base_url(&head.network);
     let bf_submit = format!("{bf_base}/tx/submit");
+    let bf_project_id = head.network.parse::<hh_core::network::Network>().ok()
+        .and_then(|n| state.config.blockfrost_project_id(n).map(|s| s.to_string()))
+        .unwrap_or_default();
     let client = reqwest::Client::new();
 
     for i in 0..head.participant_count as u32 {
@@ -539,7 +542,7 @@ async fn auto_commit(state: &Arc<AppState>, head_id: Uuid) {
 
             match client
                 .post(&bf_submit)
-                .header("project_id", &state.config.blockfrost_project_id)
+                .header("project_id", &bf_project_id)
                 .header("Content-Type", "application/cbor")
                 .body(cbor_bytes)
                 .send()

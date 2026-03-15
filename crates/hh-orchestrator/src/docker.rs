@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
 use hh_core::error::HydraHouseError;
 use hh_core::head::HeadConfig;
 use hh_core::network::Network;
-use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 use crate::manager::{HeadDeployment, Orchestrator, ProvisionedNode};
@@ -11,10 +13,10 @@ use crate::manager::{HeadDeployment, Orchestrator, ProvisionedNode};
 pub struct DockerOrchestrator {
     pub data_dir: PathBuf,
     pub hydra_node_image: String,
-    pub blockfrost_project_id: String,
+    pub blockfrost_project_ids: HashMap<Network, String>,
     pub network_name: String,
-    /// Platform wallet signing key cborHex for auto-funding. Empty = disabled.
-    pub platform_wallet_sk: String,
+    /// Per-network platform wallet signing keys (cborHex) for auto-funding.
+    pub platform_wallet_sks: HashMap<Network, String>,
     /// AES-256-GCM key for encrypting signing key files at rest. None = plaintext.
     pub encryption_key: Option<[u8; 32]>,
 }
@@ -23,8 +25,8 @@ impl DockerOrchestrator {
     pub fn new(
         data_dir: PathBuf,
         hydra_node_image: String,
-        blockfrost_project_id: String,
-        platform_wallet_sk: String,
+        blockfrost_project_ids: HashMap<Network, String>,
+        platform_wallet_sks: HashMap<Network, String>,
     ) -> Self {
         let encryption_key = crate::encrypt::encryption_key_from_env();
         if encryption_key.is_some() {
@@ -34,9 +36,9 @@ impl DockerOrchestrator {
         Self {
             data_dir,
             hydra_node_image,
-            blockfrost_project_id,
+            blockfrost_project_ids,
             network_name: "hydrahouse".into(),
-            platform_wallet_sk,
+            platform_wallet_sks,
             encryption_key,
         }
     }
@@ -105,11 +107,21 @@ impl Orchestrator for DockerOrchestrator {
             .map(|_| hh_keys::hydra::generate_key_pair())
             .collect();
 
-        // Use the official Hydra L2 protocol parameters (zero fees, full cost models)
-        let protocol_params_path = std::path::Path::new("config/protocol-parameters.json");
-        let protocol_params_content = std::fs::read_to_string(protocol_params_path)
+        let blockfrost_project_id = self.blockfrost_project_ids.get(&network)
+            .ok_or_else(|| HydraHouseError::Orchestration(
+                format!("no Blockfrost project ID configured for network {network}")
+            ))?;
+
+        // Try network-specific protocol params, fall back to shared file
+        let network_pp_path = format!("config/protocol-parameters-{network}.json");
+        let protocol_params_path = if std::path::Path::new(&network_pp_path).exists() {
+            network_pp_path
+        } else {
+            "config/protocol-parameters.json".to_string()
+        };
+        let protocol_params_content = std::fs::read_to_string(&protocol_params_path)
             .map_err(|e| HydraHouseError::Orchestration(format!(
-                "read config/protocol-parameters.json: {e} (run from the repo root)"
+                "read {protocol_params_path}: {e} (run from the repo root)"
             )))?;
 
         let contestation_secs = config.contestation_period_secs;
@@ -128,13 +140,13 @@ impl Orchestrator for DockerOrchestrator {
             })
             .collect();
 
-        if !self.platform_wallet_sk.is_empty() {
-            tracing::info!(%head_id, "auto-funding node addresses with L1 fuel");
+        if let Some(wallet_sk) = self.platform_wallet_sks.get(&network) {
+            tracing::info!(%head_id, %network, "auto-funding node addresses with L1 fuel");
 
             let funder = crate::funding::BlockfrostFunder::new(
                 network,
-                &self.blockfrost_project_id,
-                &self.platform_wallet_sk,
+                blockfrost_project_id,
+                wallet_sk,
             )
             .map_err(|e| HydraHouseError::Orchestration(format!("init funder: {e}")))?;
 
@@ -145,7 +157,7 @@ impl Orchestrator for DockerOrchestrator {
 
             tracing::info!(%head_id, "auto-funding complete");
         } else {
-            tracing::warn!(%head_id, "no platform wallet configured — nodes must be funded manually");
+            tracing::warn!(%head_id, %network, "no platform wallet configured for network — nodes must be funded manually");
         }
 
         let mut nodes = Vec::new();
@@ -156,7 +168,7 @@ impl Orchestrator for DockerOrchestrator {
                 .map_err(|e| HydraHouseError::Orchestration(format!("mkdir node: {e}")))?;
 
             // Write Blockfrost project ID file
-            Self::write_file(&node_dir, "blockfrost.txt", &self.blockfrost_project_id)?;
+            Self::write_file(&node_dir, "blockfrost.txt", blockfrost_project_id)?;
 
             // Write this node's signing keys (encrypted at rest if HH_ENCRYPTION_KEY is set)
             self.write_key_file(

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use hh_core::head::HeadConfig;
 use hh_core::network::Network;
 use uuid::Uuid;
@@ -44,7 +46,7 @@ pub trait Orchestrator: Send + Sync {
 pub struct K8sOrchestrator {
     pub client: kube::Client,
     pub namespace: String,
-    pub blockfrost_project_id: String,
+    pub blockfrost_project_ids: HashMap<Network, String>,
     pub hydra_node_image: String,
 }
 
@@ -59,6 +61,11 @@ impl Orchestrator for K8sOrchestrator {
     ) -> Result<HeadDeployment, hh_core::error::HydraHouseError> {
         let err = |e: anyhow::Error| hh_core::error::HydraHouseError::Orchestration(e.to_string());
 
+        let blockfrost_project_id = self.blockfrost_project_ids.get(&network)
+            .ok_or_else(|| hh_core::error::HydraHouseError::Orchestration(
+                format!("no Blockfrost project ID configured for network {network}")
+            ))?;
+
         // 1. Generate all key pairs upfront
         let cardano_keys: Vec<_> = (0..participant_count)
             .map(|_| hh_keys::cardano::generate_key_pair())
@@ -69,18 +76,23 @@ impl Orchestrator for K8sOrchestrator {
 
         // 2. Create Blockfrost secret (shared across all nodes in this head)
         let bf_secret =
-            super::secrets::build_blockfrost_secret(head_id, &self.blockfrost_project_id);
+            super::secrets::build_blockfrost_secret(head_id, blockfrost_project_id);
         super::secrets::create_secret(&self.client, &self.namespace, &bf_secret)
             .await
             .map_err(err)?;
 
         let bf_secret_name = super::secrets::blockfrost_secret_name(head_id);
 
-        // 3. Create protocol-parameters ConfigMap
-        let protocol_params_path = std::path::Path::new("config/protocol-parameters.json");
-        let protocol_params_content = std::fs::read_to_string(protocol_params_path)
+        // 3. Create protocol-parameters ConfigMap (try network-specific, fall back to shared)
+        let network_pp_path = format!("config/protocol-parameters-{network}.json");
+        let protocol_params_path = if std::path::Path::new(&network_pp_path).exists() {
+            network_pp_path
+        } else {
+            "config/protocol-parameters.json".to_string()
+        };
+        let protocol_params_content = std::fs::read_to_string(&protocol_params_path)
             .map_err(|e| hh_core::error::HydraHouseError::Orchestration(format!(
-                "read config/protocol-parameters.json: {e}"
+                "read {protocol_params_path}: {e}"
             )))?;
         let pp_cm = super::secrets::build_protocol_params_configmap(head_id, &protocol_params_content);
         super::secrets::create_configmap(&self.client, &self.namespace, &pp_cm)

@@ -56,6 +56,7 @@ impl Orchestrator for MockOrchestrator {
 }
 
 fn test_config() -> AppConfig {
+    use std::collections::HashMap;
     AppConfig {
         database_url: std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://hydrahouse:hydrahouse@localhost:5432/hydrahouse".into()),
@@ -64,9 +65,11 @@ fn test_config() -> AppConfig {
         mode: hh_core::config::OrchestratorMode::Docker,
         k8s_namespace: "test".into(),
         data_dir: "/tmp/hh-test".into(),
-        blockfrost_project_id: "test-project".into(),
+        blockfrost_project_ids: HashMap::from([
+            (Network::Preprod, "test-project".into()),
+        ]),
         hydra_node_image: "test-image:latest".into(),
-        platform_wallet_sk: String::new(),
+        platform_wallet_sks: HashMap::new(),
         stripe_secret_key: String::new(),
         stripe_webhook_secret: String::new(),
         cost_head_open_cents: 500,

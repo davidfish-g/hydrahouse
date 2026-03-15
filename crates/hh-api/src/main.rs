@@ -34,14 +34,21 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("running migrations...");
     hh_db::run_migrations(&pool).await?;
 
+    let configured_networks = config.configured_networks();
+    if configured_networks.is_empty() {
+        tracing::warn!("no networks have a Blockfrost project ID configured — head creation will fail");
+    } else {
+        tracing::info!(networks = ?configured_networks, "network support enabled");
+    }
+
     let orchestrator: Box<dyn Orchestrator> = match config.mode {
         OrchestratorMode::Docker => {
             tracing::info!(data_dir = %config.data_dir, image = %config.hydra_node_image, "using Docker orchestrator");
             Box::new(DockerOrchestrator::new(
                 config.data_dir.clone().into(),
                 config.hydra_node_image.clone(),
-                config.blockfrost_project_id.clone(),
-                config.platform_wallet_sk.clone(),
+                config.blockfrost_project_ids.clone(),
+                config.platform_wallet_sks.clone(),
             ))
         }
         OrchestratorMode::Kubernetes => {
@@ -50,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(K8sOrchestrator {
                 client: k8s_client,
                 namespace: config.k8s_namespace.clone(),
-                blockfrost_project_id: config.blockfrost_project_id.clone(),
+                blockfrost_project_ids: config.blockfrost_project_ids.clone(),
                 hydra_node_image: config.hydra_node_image.clone(),
             })
         }

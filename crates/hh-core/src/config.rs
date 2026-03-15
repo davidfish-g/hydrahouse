@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
+
+use crate::network::Network;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -26,16 +30,17 @@ pub struct AppConfig {
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
 
+    /// Per-network Blockfrost project IDs.
     #[serde(default)]
-    pub blockfrost_project_id: String,
+    pub blockfrost_project_ids: HashMap<Network, String>,
 
     #[serde(default = "default_hydra_node_image")]
     pub hydra_node_image: String,
 
-    /// Platform wallet signing key cborHex (e.g. "5820abcd...") for auto-funding node addresses.
-    /// If empty, auto-funding is disabled and nodes must be funded manually.
+    /// Per-network platform wallet signing keys (cborHex) for auto-funding node addresses.
+    /// Networks without a key will require manual funding.
     #[serde(default)]
-    pub platform_wallet_sk: String,
+    pub platform_wallet_sks: HashMap<Network, String>,
 
     /// Stripe secret key (sk_...). If empty, billing is disabled.
     #[serde(default)]
@@ -84,7 +89,40 @@ fn default_hydra_node_image() -> String {
     "ghcr.io/cardano-scaling/hydra-node:1.2.0".into()
 }
 
+/// Read per-network env vars with `_PREPROD`, `_PREVIEW`, `_MAINNET` suffixes.
+fn read_per_network_env(prefix: &str) -> HashMap<Network, String> {
+    let mut map = HashMap::new();
+    for (suffix, network) in [
+        ("_PREPROD", Network::Preprod),
+        ("_PREVIEW", Network::Preview),
+        ("_MAINNET", Network::Mainnet),
+    ] {
+        if let Ok(val) = std::env::var(format!("{prefix}{suffix}")) {
+            if !val.is_empty() {
+                map.insert(network, val);
+            }
+        }
+    }
+    map
+}
+
 impl AppConfig {
+    pub fn blockfrost_project_id(&self, network: Network) -> Option<&str> {
+        self.blockfrost_project_ids.get(&network).map(|s| s.as_str())
+    }
+
+    pub fn platform_wallet_sk(&self, network: Network) -> Option<&str> {
+        self.platform_wallet_sks.get(&network).map(|s| s.as_str())
+    }
+
+    /// Returns the list of networks that have both a Blockfrost project ID and a platform wallet SK configured.
+    pub fn configured_networks(&self) -> Vec<Network> {
+        [Network::Preprod, Network::Preview, Network::Mainnet]
+            .into_iter()
+            .filter(|n| self.blockfrost_project_ids.contains_key(n))
+            .collect()
+    }
+
     pub fn from_env() -> Self {
         Self {
             database_url: std::env::var("DATABASE_URL")
@@ -105,12 +143,10 @@ impl AppConfig {
                 .unwrap_or_else(|_| default_k8s_namespace()),
             data_dir: std::env::var("HH_DATA_DIR")
                 .unwrap_or_else(|_| default_data_dir()),
-            blockfrost_project_id: std::env::var("HH_BLOCKFROST_PROJECT_ID")
-                .unwrap_or_default(),
+            blockfrost_project_ids: read_per_network_env("HH_BLOCKFROST_PROJECT_ID"),
             hydra_node_image: std::env::var("HH_HYDRA_NODE_IMAGE")
                 .unwrap_or_else(|_| default_hydra_node_image()),
-            platform_wallet_sk: std::env::var("HH_PLATFORM_WALLET_SK")
-                .unwrap_or_default(),
+            platform_wallet_sks: read_per_network_env("HH_PLATFORM_WALLET_SK"),
             stripe_secret_key: std::env::var("STRIPE_SECRET_KEY").unwrap_or_default(),
             stripe_webhook_secret: std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default(),
             cost_head_open_cents: 500,
