@@ -1,2 +1,5 @@
+[build]
+buildCommand = "cargo build --release -p hh-api && mkdir -p bin && cp target/release/hh-api bin/"
+
 [deploy]
-startCommand = "hh-api"
+startCommand = "./bin/hh-api"
