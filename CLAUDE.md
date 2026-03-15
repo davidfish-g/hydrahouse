@@ -59,7 +59,7 @@ hh-api (axum server + CLI entry) → hh-orchestrator → hh-keys
 - **hh-core**: Pure domain types (no IO). `HeadStatus` state machine, `Network` enum, `AppConfig` (env-based), error types. All other crates depend on this.
 - **hh-api**: axum HTTP/WS server. Modules: `handlers/` (REST endpoints), `auth` (API key middleware), `lifecycle` (background WS monitor that auto-advances head state), `ws` (WebSocket proxy to hydra-nodes), `billing` (Stripe integration), `ratelimit`.
 - **hh-db**: PostgreSQL repository layer via SQLx. Sub-modules: `accounts`, `heads`, `participants`, `head_events`, `usage`. Migrations live in `/migrations/*.sql` and run automatically on startup.
-- **hh-orchestrator**: Provisions hydra-node containers. Two backends behind the `Orchestrator` trait: `DockerOrchestrator` (local dev) and `K8sOrchestrator` (production). Also handles key encryption (`encrypt`) and node auto-funding (`funding`).
+- **hh-orchestrator**: Provisions hydra-node containers. Two backends behind the `Orchestrator` trait: `DockerOrchestrator` (local dev) and `RailwayOrchestrator` (production, uses Railway GraphQL API). Also handles key encryption (`encrypt`) and node auto-funding (`funding`).
 - **hh-keys**: Ed25519 key generation for Cardano and Hydra envelope formats, bech32 encoding, transaction building (`tx`).
 - **hh-cli**: clap-based CLI binary (`hydrahouse`). Subcommands: create, list, get, close, abort.
 
@@ -67,14 +67,14 @@ hh-api (axum server + CLI entry) → hh-orchestrator → hh-keys
 
 - **Head lifecycle state machine**: `HeadStatus` in `hh-core/src/head.rs` defines valid transitions via `can_transition_to()`. The lifecycle worker in `hh-api/src/lifecycle.rs` connects to hydra-node WebSocket and auto-advances states (Init → Commit → Open, Close → Fanout → teardown).
 - **Orchestrator trait**: `hh-orchestrator/src/manager.rs` defines the `Orchestrator` trait. Tests use `MockOrchestrator` (see `hh-api/tests/api_test.rs`).
-- **Config from env**: `AppConfig::from_env()` reads env vars (`DATABASE_URL`, `HH_MODE`, `HH_BLOCKFROST_PROJECT_ID`, etc.). `HH_MODE=docker|kubernetes` selects orchestrator backend.
+- **Config from env**: `AppConfig::from_env()` reads env vars (`DATABASE_URL`, `RAILWAY_API_TOKEN`, `HH_BLOCKFROST_PROJECT_ID`, etc.). If `RAILWAY_API_TOKEN` is set, Railway orchestrator is used; otherwise Docker (local dev).
 - **Auth**: Bearer token auth with `hh_sk_` prefixed API keys, argon2 hashed. Middleware in `hh-api/src/auth.rs`.
 - **OpenAPI**: Generated via utoipa, served at `/api-docs`.
 
 ### Other directories
 
 - `sdk/` -- TypeScript SDK for the API (work in progress)
-- `deploy/` -- Kubernetes deployment manifests and Helm charts
+- `deploy/` -- Deployment configuration
 - `scripts/` -- Utility scripts (seed.sh, e2e-test.sh)
 
 ### Dashboard

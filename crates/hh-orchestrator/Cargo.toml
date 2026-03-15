@@ -6,8 +6,6 @@ edition.workspace = true
 [dependencies]
 hh-core = { workspace = true }
 hh-keys = { workspace = true }
-kube = { workspace = true }
-k8s-openapi = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

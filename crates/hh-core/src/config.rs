@@ -4,13 +4,6 @@ use serde::Deserialize;
 
 use crate::network::Network;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum OrchestratorMode {
-    Docker,
-    Kubernetes,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
     pub database_url: String,
@@ -20,12 +13,6 @@ pub struct AppConfig {
 
     #[serde(default = "default_ws_base_url")]
     pub ws_base_url: String,
-
-    #[serde(default = "default_mode")]
-    pub mode: OrchestratorMode,
-
-    #[serde(default = "default_k8s_namespace")]
-    pub k8s_namespace: String,
 
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
@@ -63,6 +50,18 @@ pub struct AppConfig {
     /// Comma-separated list of allowed CORS origins. Falls back to localhost for dev.
     #[serde(default)]
     pub cors_origins: Vec<String>,
+
+    /// Railway API token. If set, Railway orchestrator is used instead of Docker.
+    #[serde(default)]
+    pub railway_api_token: String,
+
+    /// Railway project ID for deploying hydra-node services.
+    #[serde(default)]
+    pub railway_project_id: String,
+
+    /// Railway environment ID for deploying hydra-node services.
+    #[serde(default)]
+    pub railway_environment_id: String,
 }
 
 fn default_listen_addr() -> String {
@@ -71,14 +70,6 @@ fn default_listen_addr() -> String {
 
 fn default_ws_base_url() -> String {
     "ws://localhost:3000".into()
-}
-
-fn default_mode() -> OrchestratorMode {
-    OrchestratorMode::Docker
-}
-
-fn default_k8s_namespace() -> String {
-    "hydrahouse".into()
 }
 
 fn default_data_dir() -> String {
@@ -131,16 +122,6 @@ impl AppConfig {
                 .unwrap_or_else(|_| default_listen_addr()),
             ws_base_url: std::env::var("HH_WS_BASE_URL")
                 .unwrap_or_else(|_| default_ws_base_url()),
-            mode: std::env::var("HH_MODE")
-                .ok()
-                .and_then(|m| match m.to_lowercase().as_str() {
-                    "docker" => Some(OrchestratorMode::Docker),
-                    "kubernetes" | "k8s" => Some(OrchestratorMode::Kubernetes),
-                    _ => None,
-                })
-                .unwrap_or_else(default_mode),
-            k8s_namespace: std::env::var("HH_K8S_NAMESPACE")
-                .unwrap_or_else(|_| default_k8s_namespace()),
             data_dir: std::env::var("HH_DATA_DIR")
                 .unwrap_or_else(|_| default_data_dir()),
             blockfrost_project_ids: read_per_network_env("HH_BLOCKFROST_PROJECT_ID"),
@@ -156,6 +137,9 @@ impl AppConfig {
                 .ok()
                 .map(|s| s.split(',').map(|o| o.trim().to_string()).filter(|o| !o.is_empty()).collect())
                 .unwrap_or_default(),
+            railway_api_token: std::env::var("RAILWAY_API_TOKEN").unwrap_or_default(),
+            railway_project_id: std::env::var("RAILWAY_PROJECT_ID").unwrap_or_default(),
+            railway_environment_id: std::env::var("RAILWAY_ENVIRONMENT_ID").unwrap_or_default(),
         }
     }
 }

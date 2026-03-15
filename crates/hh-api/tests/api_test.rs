@@ -62,8 +62,6 @@ fn test_config() -> AppConfig {
             .unwrap_or_else(|_| "postgres://hydrahouse:hydrahouse@localhost:5432/hydrahouse".into()),
         listen_addr: "0.0.0.0:0".into(),
         ws_base_url: "ws://test:3000".into(),
-        mode: hh_core::config::OrchestratorMode::Docker,
-        k8s_namespace: "test".into(),
         data_dir: "/tmp/hh-test".into(),
         blockfrost_project_ids: HashMap::from([
             (Network::Preprod, "test-project".into()),
@@ -76,6 +74,9 @@ fn test_config() -> AppConfig {
         cost_api_request_cents: 1,
         google_client_id: String::new(),
         cors_origins: vec![],
+        railway_api_token: String::new(),
+        railway_project_id: String::new(),
+        railway_environment_id: String::new(),
     }
 }
 

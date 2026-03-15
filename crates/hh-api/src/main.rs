@@ -10,9 +10,10 @@ use hh_api::handlers::{accounts, api_keys, auth_google, heads, health, transacti
 use hh_api::openapi;
 use hh_api::state::AppState;
 use hh_api::ws;
-use hh_core::config::{AppConfig, OrchestratorMode};
+use hh_core::config::AppConfig;
 use hh_orchestrator::docker::DockerOrchestrator;
-use hh_orchestrator::manager::{K8sOrchestrator, Orchestrator};
+use hh_orchestrator::manager::Orchestrator;
+use hh_orchestrator::railway::RailwayOrchestrator;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -41,26 +42,24 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!(networks = ?configured_networks, "network support enabled");
     }
 
-    let orchestrator: Box<dyn Orchestrator> = match config.mode {
-        OrchestratorMode::Docker => {
-            tracing::info!(data_dir = %config.data_dir, image = %config.hydra_node_image, "using Docker orchestrator");
-            Box::new(DockerOrchestrator::new(
-                config.data_dir.clone().into(),
-                config.hydra_node_image.clone(),
-                config.blockfrost_project_ids.clone(),
-                config.platform_wallet_sks.clone(),
-            ))
-        }
-        OrchestratorMode::Kubernetes => {
-            tracing::info!(namespace = %config.k8s_namespace, "using Kubernetes orchestrator");
-            let k8s_client = kube::Client::try_default().await?;
-            Box::new(K8sOrchestrator {
-                client: k8s_client,
-                namespace: config.k8s_namespace.clone(),
-                blockfrost_project_ids: config.blockfrost_project_ids.clone(),
-                hydra_node_image: config.hydra_node_image.clone(),
-            })
-        }
+    let orchestrator: Box<dyn Orchestrator> = if !config.railway_api_token.is_empty() {
+        tracing::info!("using Railway orchestrator");
+        Box::new(RailwayOrchestrator::new(
+            config.railway_api_token.clone(),
+            config.railway_project_id.clone(),
+            config.railway_environment_id.clone(),
+            config.hydra_node_image.clone(),
+            config.blockfrost_project_ids.clone(),
+            config.platform_wallet_sks.clone(),
+        ))
+    } else {
+        tracing::info!(data_dir = %config.data_dir, image = %config.hydra_node_image, "using Docker orchestrator (local dev)");
+        Box::new(DockerOrchestrator::new(
+            config.data_dir.clone().into(),
+            config.hydra_node_image.clone(),
+            config.blockfrost_project_ids.clone(),
+            config.platform_wallet_sks.clone(),
+        ))
     };
 
     let state = AppState::new(pool, config.clone(), orchestrator);
@@ -168,7 +167,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(tower_http::trace::TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind(&config.listen_addr).await?;
-    tracing::info!(listen_addr = %config.listen_addr, mode = ?config.mode, "HydraHouse API server starting");
+    tracing::info!(listen_addr = %config.listen_addr, "HydraHouse API server starting");
     axum::serve(listener, app).await?;
 
     Ok(())
