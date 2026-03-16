@@ -10,6 +10,7 @@ import EventHistory from "../components/EventHistory";
 import TxSubmitForm from "../components/TxSubmitForm";
 import TransferForm from "../components/TransferForm";
 import ConfirmModal from "../components/ConfirmModal";
+import { ArrowLeft, Clipboard, Check } from "lucide-react";
 
 export default function HeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export default function HeadDetail() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmAction, setConfirmAction] = useState<"close" | "abort" | null>(null);
+  const [wsCopied, setWsCopied] = useState(false);
 
   const fetchHead = useCallback(async () => {
     if (!id) return;
@@ -66,12 +68,10 @@ export default function HeadDetail() {
     }
   }
 
-
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -79,10 +79,10 @@ export default function HeadDetail() {
   if (!head) {
     return (
       <div className="text-center py-20">
-        <p className="text-red-400 mb-4">{error || "Head not found"}</p>
+        <p className="text-red-600 mb-4">{error || "Head not found"}</p>
         <button
           onClick={() => navigate("/")}
-          className="text-sm text-indigo-400 hover:text-indigo-300"
+          className="text-sm text-primary hover:text-primary-hover"
         >
           Back to heads
         </button>
@@ -94,33 +94,31 @@ export default function HeadDetail() {
   const canAbort = ["provisioning", "initializing", "committing", "open"].includes(head.status);
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-6xl space-y-6">
       {/* Back link */}
       <button
         onClick={() => navigate("/")}
-        className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
       >
-        &larr; All heads
+        <ArrowLeft size={14} />
+        All heads
       </button>
 
-      {/* Header */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <div className="flex items-start justify-between mb-4">
+      {/* Header card */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <div className="flex items-start justify-between mb-5">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-lg font-semibold text-slate-100">
-                Head
-              </h2>
               <StatusBadge status={head.status} />
             </div>
-            <p className="text-xs font-mono text-slate-500">{head.head_id}</p>
+            <p className="text-xs font-mono text-gray-500 mt-1">{head.head_id}</p>
           </div>
           <div className="flex gap-2">
             {canClose && (
               <button
                 onClick={() => setConfirmAction("close")}
                 disabled={actionLoading}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+                className="px-3 py-1.5 border border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-50 text-sm rounded-lg transition-colors"
               >
                 Close Head
               </button>
@@ -129,7 +127,7 @@ export default function HeadDetail() {
               <button
                 onClick={() => setConfirmAction("abort")}
                 disabled={actionLoading}
-                className="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 disabled:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+                className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 text-sm rounded-lg transition-colors"
               >
                 Abort
               </button>
@@ -139,20 +137,20 @@ export default function HeadDetail() {
 
         <div className="grid grid-cols-4 gap-4 text-sm">
           <div>
-            <span className="text-slate-500">Network</span>
-            <p className="text-slate-200 capitalize">{head.network}</p>
+            <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Network</span>
+            <p className="text-gray-900 capitalize mt-0.5">{head.network}</p>
           </div>
           <div>
-            <span className="text-slate-500">Participants</span>
-            <p className="text-slate-200">{head.participant_count}</p>
+            <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Participants</span>
+            <p className="text-gray-900 mt-0.5">{head.participant_count}</p>
           </div>
           <div>
-            <span className="text-slate-500">Contestation</span>
-            <p className="text-slate-200">{head.config.contestation_period_secs}s</p>
+            <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Contestation</span>
+            <p className="text-gray-900 mt-0.5">{head.config.contestation_period_secs}s</p>
           </div>
           <div>
-            <span className="text-slate-500">Created</span>
-            <p className="text-slate-200">
+            <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Created</span>
+            <p className="text-gray-900 mt-0.5">
               {new Date(head.created_at).toLocaleString()}
             </p>
           </div>
@@ -160,87 +158,108 @@ export default function HeadDetail() {
       </div>
 
       {/* Lifecycle bar */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-slate-400 mb-3">Lifecycle</h3>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Lifecycle</h3>
         <LifecycleBar status={head.status} />
       </div>
 
-      {/* Participants */}
-      <div>
-        <h3 className="text-sm font-medium text-slate-400 mb-3">
-          Participants
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {head.participants.map((p) => (
-            <ParticipantCard key={p.id} p={p} />
-          ))}
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left column (60%) */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* L2 UTxO Snapshot */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              L2 UTxO Snapshot
+            </h3>
+            <UtxoViewer headId={head.head_id} isOpen={head.status === "open"} />
+          </div>
+
+          {/* Event History */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              Event History
+            </h3>
+            <EventHistory headId={head.head_id} />
+          </div>
+
+          {/* Submit Transaction */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+              Submit Raw L2 Transaction
+            </h3>
+            <TxSubmitForm headId={head.head_id} isOpen={head.status === "open"} />
+          </div>
         </div>
-      </div>
 
-      {/* Deposit funds into open head */}
-      {head.status === "open" && (
-        <DepositSection headId={head.head_id} participants={head.participants} />
-      )}
+        {/* Right column (40%) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Participants */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Participants
+            </h3>
+            {head.participants.map((p) => (
+              <ParticipantCard key={p.id} p={p} />
+            ))}
+          </div>
 
-      {/* Withdraw (L2 → L1) */}
-      {head.status === "open" && (
-        <WithdrawSection headId={head.head_id} participants={head.participants} />
-      )}
+          {/* Deposit */}
+          {head.status === "open" && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <DepositSection headId={head.head_id} participants={head.participants} />
+            </div>
+          )}
 
-      {/* L2 Transfer */}
-      {head.status === "open" && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-          <h3 className="text-sm font-medium text-slate-400 mb-3">
-            L2 Transfer
-          </h3>
-          <TransferForm headId={head.head_id} participants={head.participants} />
+          {/* Withdraw */}
+          {head.status === "open" && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <WithdrawSection headId={head.head_id} participants={head.participants} />
+            </div>
+          )}
+
+          {/* L2 Transfer */}
+          {head.status === "open" && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
+                L2 Transfer
+              </h3>
+              <TransferForm headId={head.head_id} participants={head.participants} />
+            </div>
+          )}
         </div>
-      )}
-
-      {/* L2 UTxO Snapshot */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-slate-400 mb-3">
-          L2 UTxO Snapshot
-        </h3>
-        <UtxoViewer headId={head.head_id} isOpen={head.status === "open"} />
-      </div>
-
-      {/* Submit Transaction (raw CBOR) */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-slate-400 mb-3">
-          Submit Raw L2 Transaction
-        </h3>
-        <TxSubmitForm headId={head.head_id} isOpen={head.status === "open"} />
-      </div>
-
-      {/* Event History */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-slate-400 mb-3">
-          Event History
-        </h3>
-        <EventHistory headId={head.head_id} />
       </div>
 
       {/* WebSocket URL */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-slate-400 mb-2">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
           WebSocket URL
         </h3>
-        <code className="text-xs text-indigo-300 font-mono break-all">
-          {head.ws_url}
-        </code>
+        <div className="flex items-center gap-2">
+          <code className="text-xs text-primary font-mono break-all flex-1">
+            {head.ws_url}
+          </code>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(head.ws_url);
+              setWsCopied(true);
+              setTimeout(() => setWsCopied(false), 1500);
+            }}
+            className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {wsCopied ? <Check size={14} className="text-emerald-500" /> : <Clipboard size={14} />}
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <p className="text-sm text-red-400">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <ConfirmModal
         open={confirmAction === "close"}
         title="Close Head"
         message="This will initiate the contestation period. Are you sure you want to close this head?"
         confirmLabel="Close Head"
-        confirmClassName="bg-blue-600 hover:bg-blue-500"
+        destructive={false}
         onConfirm={handleClose}
         onCancel={() => setConfirmAction(null)}
       />
@@ -280,18 +299,18 @@ function DepositSection({ headId, participants }: { headId: string; participants
   const selectedAddr = participants.find((p) => p.slot_index === slot)?.cardano_address;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-slate-400 mb-3">Deposit Funds (L1 → L2)</h3>
-      <p className="text-xs text-slate-500 mb-3">
+    <>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Deposit Funds (L1 → L2)</h3>
+      <p className="text-xs text-gray-400 mb-3">
         Send ADA to a participant's Cardano address, then click Deposit to move those funds into the L2 head.
       </p>
       <form onSubmit={handleDeposit} className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Participant</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Participant</label>
           <select
             value={slot}
             onChange={(e) => setSlot(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-100"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             {participants.map((p) => (
               <option key={p.id} value={p.slot_index}>
@@ -301,21 +320,21 @@ function DepositSection({ headId, participants }: { headId: string; participants
           </select>
         </div>
         {selectedAddr && (
-          <div className="text-xs text-slate-500 font-mono break-all bg-slate-900 p-2 rounded">
+          <div className="text-xs text-gray-500 font-mono break-all bg-gray-50 p-2 rounded-lg border border-gray-100">
             {selectedAddr}
           </div>
         )}
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-gray-200 text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? "Depositing..." : "Deposit"}
         </button>
-        {result && <p className="text-sm text-emerald-400">{result}</p>}
-        {err && <p className="text-sm text-red-400">{err}</p>}
+        {result && <p className="text-sm text-emerald-600">{result}</p>}
+        {err && <p className="text-sm text-red-600">{err}</p>}
       </form>
-    </div>
+    </>
   );
 }
 
@@ -347,18 +366,18 @@ function WithdrawSection({ headId, participants }: { headId: string; participant
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-      <h3 className="text-sm font-medium text-slate-400 mb-3">Withdraw (L2 → L1)</h3>
-      <p className="text-xs text-slate-500 mb-3">
+    <>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Withdraw (L2 → L1)</h3>
+      <p className="text-xs text-gray-400 mb-3">
         Decommit a UTxO from L2; funds will return to the participant&apos;s Cardano address after the protocol finalizes.
       </p>
       <form onSubmit={handleWithdraw} className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Participant slot</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Participant slot</label>
           <select
             value={slot}
             onChange={(e) => setSlot(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-100"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             {participants.map((p) => (
               <option key={p.id} value={p.slot_index}>
@@ -368,26 +387,26 @@ function WithdrawSection({ headId, participants }: { headId: string; participant
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Lovelace to withdraw</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Lovelace to withdraw</label>
           <input
             type="number"
             value={lovelace}
             onChange={(e) => setLovelace(e.target.value)}
             placeholder="e.g. 5000000"
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-slate-100"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             min={1}
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-200 text-white text-sm font-medium rounded-lg transition-colors"
         >
           {loading ? "Withdrawing..." : "Withdraw"}
         </button>
-        {result && <p className="text-sm text-emerald-400">{result}</p>}
-        {err && <p className="text-sm text-red-400">{err}</p>}
+        {result && <p className="text-sm text-emerald-600">{result}</p>}
+        {err && <p className="text-sm text-red-600">{err}</p>}
       </form>
-    </div>
+    </>
   );
 }

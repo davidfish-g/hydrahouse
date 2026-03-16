@@ -45,11 +45,11 @@ export default function TransferForm({ headId, participants }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-slate-500 mb-1">From</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
           <select
             value={from}
             onChange={(e) => setFrom(Number(e.target.value))}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             {participants.map((p) => (
               <option key={p.slot_index} value={p.slot_index}>
@@ -59,11 +59,11 @@ export default function TransferForm({ headId, participants }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-slate-500 mb-1">To</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
           <select
             value={to}
             onChange={(e) => setTo(Number(e.target.value))}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           >
             {participants.map((p) => (
               <option key={p.slot_index} value={p.slot_index}>
@@ -75,8 +75,8 @@ export default function TransferForm({ headId, participants }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs text-slate-500 mb-1">
-          Amount (lovelace) &mdash; <span className="text-indigo-400">{adaPreview} ADA</span>
+        <label className="block text-xs font-medium text-gray-500 mb-1">
+          Amount (lovelace) &mdash; <span className="text-primary">{adaPreview} ADA</span>
         </label>
         <input
           type="number"
@@ -84,7 +84,7 @@ export default function TransferForm({ headId, participants }: Props) {
           value={lovelace}
           onChange={(e) => setLovelace(e.target.value)}
           placeholder="e.g. 5000000 (5 ADA)"
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
         />
       </div>
 
@@ -92,15 +92,15 @@ export default function TransferForm({ headId, participants }: Props) {
         <button
           type="submit"
           disabled={submitting || !lovelace || from === to}
-          className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm rounded-lg transition-colors"
+          className="px-4 py-1.5 bg-primary hover:bg-primary-hover disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm rounded-lg transition-colors"
         >
           {submitting ? "Transferring..." : "Transfer"}
         </button>
         {from === to && lovelace && (
-          <span className="text-xs text-amber-400">Sender and receiver must be different</span>
+          <span className="text-xs text-amber-600">Sender and receiver must be different</span>
         )}
         {result && (
-          <span className={`text-xs ${result.ok ? "text-emerald-400" : "text-red-400"}`}>
+          <span className={`text-xs ${result.ok ? "text-emerald-600" : "text-red-600"}`}>
             {result.message}
           </span>
         )}

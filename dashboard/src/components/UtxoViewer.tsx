@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getSnapshot } from "../api";
 import { lovelaceToAda } from "../utils";
+import { RefreshCw } from "lucide-react";
 
 interface Props {
   headId: string;
@@ -32,7 +33,7 @@ export default function UtxoViewer({ headId, isOpen }: Props) {
 
   if (!isOpen) {
     return (
-      <div className="text-sm text-slate-500 italic">
+      <div className="text-sm text-gray-400 italic">
         UTxO snapshot is only available when the head is open.
       </div>
     );
@@ -43,26 +44,27 @@ export default function UtxoViewer({ headId, isOpen }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-gray-500">
           {entries.length} UTxO{entries.length !== 1 ? "s" : ""}
         </span>
         <button
           onClick={fetchUtxo}
           disabled={loading}
-          className="text-xs text-indigo-400 hover:text-indigo-300 disabled:text-slate-600"
+          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover disabled:text-gray-300 transition-colors"
         >
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
 
       {entries.length === 0 && !error && (
-        <p className="text-sm text-slate-500 italic">No UTxOs in head yet.</p>
+        <p className="text-sm text-gray-400 italic">No UTxOs in head yet.</p>
       )}
 
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {entries.map(([ref, output]) => {
+      <div className="space-y-1 max-h-96 overflow-y-auto">
+        {entries.map(([ref, output], i) => {
           const out = output as Record<string, unknown>;
           const value = out.value as Record<string, unknown> | undefined;
           const lovelace = value?.lovelace as number | undefined;
@@ -70,20 +72,17 @@ export default function UtxoViewer({ headId, isOpen }: Props) {
           return (
             <div
               key={ref}
-              className="bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs"
+              className={`rounded-lg p-3 text-xs ${i % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
             >
-              <p className="font-mono text-slate-400 break-all mb-1">{ref}</p>
-              <div className="flex gap-4">
+              <p className="font-mono text-gray-500 break-all mb-1">{ref}</p>
+              <div className="flex gap-4 justify-between">
                 {out.address != null && (
-                  <span className="text-slate-500">
-                    addr:{" "}
-                    <span className="text-slate-300 font-mono">
-                      {(out.address as string).slice(0, 20)}...
-                    </span>
+                  <span className="text-gray-400 font-mono truncate">
+                    {(out.address as string).slice(0, 24)}...
                   </span>
                 )}
                 {lovelace !== undefined && (
-                  <span className="text-emerald-400">
+                  <span className="text-primary font-semibold whitespace-nowrap">
                     {lovelaceToAda(lovelace)} ADA
                   </span>
                 )}

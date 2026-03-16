@@ -1,3 +1,5 @@
+import { Box, RefreshCw, Zap, Upload, Download } from "lucide-react";
+
 function ConceptCard({
   title,
   icon,
@@ -8,71 +10,62 @@ function ConceptCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-9 h-9 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+        <div className="w-9 h-9 rounded-lg bg-primary-light flex items-center justify-center text-primary">
           {icon}
         </div>
-        <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
       </div>
-      <div className="text-sm text-slate-400 leading-relaxed">{children}</div>
+      <div className="text-sm text-gray-500 leading-relaxed">{children}</div>
     </div>
   );
 }
 
 export default function Concepts() {
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">Concepts</h1>
-      <p className="text-slate-400 mb-8">
+    <div className="max-w-[720px]">
+      <h1 className="text-[28px] font-bold text-gray-900 mb-2">Concepts</h1>
+      <p className="text-gray-500 mb-8">
         Core ideas behind Hydra heads and HydraHouse.
       </p>
 
-      {/* Lifecycle state machine diagram */}
-      <div className="mb-8 bg-slate-800/30 border border-slate-700/50 rounded-xl p-6">
-        <h3 className="text-sm font-medium text-slate-300 mb-4 text-center">
+      {/* Lifecycle state machine */}
+      <div className="mb-8 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 className="text-sm font-medium text-gray-700 mb-4 text-center">
           Head Lifecycle State Machine
         </h3>
         <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-mono">
           {[
-            { label: "Requested", color: "text-slate-400 border-slate-600 bg-slate-800" },
-            { label: "Provisioning", color: "text-slate-400 border-slate-600 bg-slate-800" },
-            { label: "Initializing", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
-            { label: "Committing", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
-            { label: "Open", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" },
-            { label: "Closing", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" },
-            { label: "Closed", color: "text-slate-400 border-slate-600 bg-slate-800" },
-            { label: "Fanned Out", color: "text-indigo-400 border-indigo-500/30 bg-indigo-500/10" },
+            { label: "Requested", color: "text-gray-600 border-gray-200 bg-gray-50" },
+            { label: "Provisioning", color: "text-gray-600 border-gray-200 bg-gray-50" },
+            { label: "Initializing", color: "text-amber-700 border-amber-200 bg-amber-50" },
+            { label: "Committing", color: "text-amber-700 border-amber-200 bg-amber-50" },
+            { label: "Open", color: "text-emerald-700 border-emerald-200 bg-emerald-50" },
+            { label: "Closing", color: "text-amber-700 border-amber-200 bg-amber-50" },
+            { label: "Closed", color: "text-gray-600 border-gray-200 bg-gray-50" },
+            { label: "Fanned Out", color: "text-primary border-primary/20 bg-primary-light" },
           ].map((state, i, arr) => (
             <div key={state.label} className="flex items-center gap-2">
-              <span
-                className={`px-2.5 py-1.5 rounded-md border ${state.color}`}
-              >
+              <span className={`px-2.5 py-1.5 rounded-md border ${state.color}`}>
                 {state.label}
               </span>
               {i < arr.length - 1 && (
-                <svg className="w-4 h-4 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               )}
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-500 text-center mt-3">
-          A head can also be <span className="text-red-400">Aborted</span> from
+        <p className="text-xs text-gray-400 text-center mt-3">
+          A head can also be <span className="text-red-600">Aborted</span> from
           any state before Fanned Out.
         </p>
       </div>
 
       <div className="space-y-4">
-        <ConceptCard
-          title="Hydra Heads"
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
-            </svg>
-          }
-        >
+        <ConceptCard title="Hydra Heads" icon={<Box size={18} />}>
           A Hydra head is a multi-party state channel on Cardano. A fixed set of
           participants runs Hydra nodes that share an L2 ledger. Funds are
           committed (locked) on L1 and mirrored on L2; transactions run off-chain
@@ -80,36 +73,22 @@ export default function Concepts() {
           applied back on L1.
         </ConceptCard>
 
-        <ConceptCard
-          title="Lifecycle"
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-            </svg>
-          }
-        >
+        <ConceptCard title="Lifecycle" icon={<RefreshCw size={18} />}>
           <p className="mb-2">
-            A head moves through states: <strong className="text-slate-300">requested</strong> →{" "}
-            <strong className="text-slate-300">provisioning</strong> →{" "}
-            <strong className="text-slate-300">initializing</strong> →{" "}
-            <strong className="text-slate-300">committing</strong> →{" "}
-            <strong className="text-emerald-400">open</strong>.
+            A head moves through states: <strong className="text-gray-700">requested</strong> →{" "}
+            <strong className="text-gray-700">provisioning</strong> →{" "}
+            <strong className="text-gray-700">initializing</strong> →{" "}
+            <strong className="text-gray-700">committing</strong> →{" "}
+            <strong className="text-emerald-600">open</strong>.
           </p>
           <p>
             Once open, you can deposit, transfer, and submit L2 transactions. To
-            finish: <strong className="text-slate-300">close</strong> → contestation period →{" "}
-            <strong className="text-indigo-300">fanned out</strong> (UTxOs back on L1).
+            finish: <strong className="text-gray-700">close</strong> → contestation period →{" "}
+            <strong className="text-primary">fanned out</strong> (UTxOs back on L1).
           </p>
         </ConceptCard>
 
-        <ConceptCard
-          title="L2 Transactions"
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-            </svg>
-          }
-        >
+        <ConceptCard title="L2 Transactions" icon={<Zap size={18} />}>
           While the head is open, transactions are proposed over the Hydra
           protocol (e.g. via the node WebSocket or HTTP). Valid transactions
           update the shared UTxO set. No L1 fees until you close or do incremental
@@ -117,27 +96,13 @@ export default function Concepts() {
         </ConceptCard>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <ConceptCard
-            title="Deposit"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-              </svg>
-            }
-          >
+          <ConceptCard title="Deposit" icon={<Upload size={18} />}>
             Send ADA to a participant's L1 address, then the system commits that
             UTxO into the head so it appears on L2. Incremental — no need to close
             the head.
           </ConceptCard>
 
-          <ConceptCard
-            title="Withdraw"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12M12 16.5V3" />
-              </svg>
-            }
-          >
+          <ConceptCard title="Withdraw" icon={<Download size={18} />}>
             Remove a UTxO from L2 and return it to L1. Also incremental — funds
             return to the participant's Cardano address after the protocol
             finalizes.

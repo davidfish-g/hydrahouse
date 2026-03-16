@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Participant } from "../api";
+import { Clipboard, Check } from "lucide-react";
 
 export default function ParticipantCard({ p }: { p: Participant }) {
   const [copied, setCopied] = useState(false);
@@ -16,25 +17,33 @@ export default function ParticipantCard({ p }: { p: Participant }) {
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-2">
+    <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-300">
-          Node {p.slot_index}
-        </span>
-        <span className="text-xs text-slate-500 capitalize">
-          {p.commit_status}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-primary-light text-primary text-xs font-semibold">
+            {p.slot_index}
+          </span>
+          <span className="text-sm font-medium text-gray-900">
+            Node {p.slot_index}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${p.commit_status === "committed" ? "bg-emerald-500" : "bg-gray-300"}`} />
+          <span className="text-xs text-gray-500 capitalize">
+            {p.commit_status}
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-2">
-        <code className="text-xs text-slate-400 font-mono truncate flex-1">
+        <code className="text-xs text-gray-500 font-mono truncate flex-1">
           {truncated}
         </code>
         {addr && (
           <button
             onClick={copy}
-            className="shrink-0 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            {copied ? "Copied" : "Copy"}
+            {copied ? <Check size={14} className="text-emerald-500" /> : <Clipboard size={14} />}
           </button>
         )}
       </div>

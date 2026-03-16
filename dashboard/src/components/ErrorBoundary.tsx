@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { AlertCircle } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -27,10 +28,11 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-64 text-center">
-          <h2 className="text-lg font-semibold text-red-400 mb-2">
+          <AlertCircle size={48} className="text-red-500 mb-4" />
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
             Something went wrong
           </h2>
-          <p className="text-sm text-slate-400 mb-4 max-w-md">
+          <p className="text-sm text-gray-500 mb-4 max-w-md">
             {this.state.error?.message || "An unexpected error occurred."}
           </p>
           <button
@@ -38,7 +40,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               this.setState({ hasError: false, error: null });
               window.location.href = "/heads";
             }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-lg transition-colors"
           >
             Go to dashboard
           </button>

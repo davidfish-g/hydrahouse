@@ -1,7 +1,9 @@
+import { Lock } from "lucide-react";
+
 const methodColors: Record<string, string> = {
-  GET: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  POST: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  DELETE: "text-red-400 bg-red-500/10 border-red-500/20",
+  GET: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  POST: "text-amber-700 bg-amber-50 border-amber-200",
+  DELETE: "text-red-700 bg-red-50 border-red-200",
 };
 
 interface Endpoint {
@@ -138,18 +140,18 @@ export default function ApiReference() {
   const grouped = groupByTag(endpoints);
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-100 mb-2">API Reference</h1>
-      <p className="text-slate-400 mb-2">
+    <div className="max-w-[720px]">
+      <h1 className="text-[28px] font-bold text-gray-900 mb-2">API Reference</h1>
+      <p className="text-gray-500 mb-2">
         REST API endpoints. Authenticate with{" "}
-        <code className="text-indigo-300 text-xs bg-slate-900 px-1.5 py-0.5 rounded">
+        <code className="text-primary text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono">
           Authorization: Bearer &lt;api_key&gt;
         </code>{" "}
         except where noted.
       </p>
-      <p className="text-slate-500 text-sm mb-8">
+      <p className="text-gray-400 text-sm mb-8">
         Base URL:{" "}
-        <code className="text-slate-400 text-xs bg-slate-900 px-1.5 py-0.5 rounded">
+        <code className="text-gray-600 text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono">
           https://api.hydrahouse.io
         </code>
       </p>
@@ -157,47 +159,34 @@ export default function ApiReference() {
       <div className="space-y-8">
         {grouped.map(([tag, eps]) => (
           <div key={tag}>
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 pb-2 border-b border-gray-200">
               {tag}
             </h2>
             <div className="space-y-3">
               {eps.map((ep, i) => (
                 <div
                   key={`${ep.method}-${ep.path}-${i}`}
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4"
+                  className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
                 >
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <span
                       className={`px-2 py-0.5 rounded text-xs font-bold border ${
-                        methodColors[ep.method] ?? "text-slate-400 bg-slate-800 border-slate-600"
+                        methodColors[ep.method] ?? "text-gray-600 bg-gray-50 border-gray-200"
                       }`}
                     >
                       {ep.method}
                     </span>
-                    <code className="text-sm text-slate-200 font-mono">
+                    <code className="text-sm text-gray-800 font-mono">
                       {ep.path}
                     </code>
                     {ep.auth && (
-                      <svg
-                        className="w-3.5 h-3.5 text-amber-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        aria-label="Requires authentication"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                        />
-                      </svg>
+                      <Lock size={14} className="text-amber-500" aria-label="Requires authentication" />
                     )}
                   </div>
-                  <p className="text-sm font-medium text-slate-300 mb-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
                     {ep.summary}
                   </p>
-                  <p className="text-xs text-slate-500">{ep.description}</p>
+                  <p className="text-xs text-gray-400">{ep.description}</p>
                 </div>
               ))}
             </div>
@@ -206,25 +195,21 @@ export default function ApiReference() {
       </div>
 
       {/* Auth info */}
-      <div className="mt-10 bg-slate-800/30 border border-slate-700/50 rounded-xl p-5">
+      <div className="mt-10 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
-          <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-          <h3 className="text-sm font-semibold text-slate-200">
+          <Lock size={18} className="text-amber-500" />
+          <h3 className="text-sm font-semibold text-gray-800">
             Authentication
           </h3>
         </div>
-        <p className="text-sm text-slate-400 leading-relaxed">
+        <p className="text-sm text-gray-500 leading-relaxed">
           Endpoints marked with{" "}
-          <svg className="w-3 h-3 text-amber-400 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>{" "}
+          <Lock size={12} className="text-amber-500 inline" />{" "}
           require a bearer token. Use your API key (prefixed with{" "}
-          <code className="text-indigo-300 text-xs bg-slate-900 px-1.5 py-0.5 rounded">
+          <code className="text-primary text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono">
             hh_sk_
           </code>
-          ) in the <code className="text-indigo-300 text-xs bg-slate-900 px-1.5 py-0.5 rounded">Authorization</code> header.
+          ) in the <code className="text-primary text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono">Authorization</code> header.
         </p>
       </div>
     </div>

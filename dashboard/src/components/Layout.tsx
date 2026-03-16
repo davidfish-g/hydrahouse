@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth";
+import { Layers, Key, CreditCard, BookOpen, ChevronRight, LogOut } from "lucide-react";
 
 const docLinks = [
   { to: "/docs", label: "Quick Start", end: true },
@@ -10,12 +11,13 @@ const docLinks = [
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {
-  return `block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+  return `flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
     isActive
-      ? "bg-indigo-600/20 text-indigo-300"
-      : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+      ? "text-gray-900 font-semibold border-l-2 border-primary -ml-px"
+      : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
   }`;
 }
+
 
 export default function Layout() {
   const { email, logout } = useAuth();
@@ -40,87 +42,98 @@ export default function Layout() {
     return () => clearInterval(intervalRef.current);
   }, []);
 
+  const initial = email ? email.charAt(0).toUpperCase() : "?";
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col">
-        <div className="p-5 border-b border-slate-700">
-          <Link to="/" className="text-lg font-bold tracking-tight text-indigo-400">
-            HydraHouse
+      <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-5 border-b border-gray-200">
+          <Link to="/" className="flex items-center gap-2.5">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <path d="M16 2L28.66 9.5V24.5L16 32L3.34 24.5V9.5L16 2Z" fill="#0A6E5C" opacity="0.1" stroke="#0A6E5C" strokeWidth="1.5"/>
+              <text x="16" y="21" textAnchor="middle" fill="#0A6E5C" fontSize="14" fontWeight="700" fontFamily="Inter, sans-serif">H</text>
+            </svg>
+            <span className="text-base font-semibold text-gray-900 tracking-tight">HydraHouse</span>
           </Link>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           <NavLink to="/heads" end className={navClass}>
+            <Layers size={18} />
             Heads
           </NavLink>
           <NavLink to="/keys" className={navClass}>
+            <Key size={18} />
             API Keys
           </NavLink>
           <NavLink to="/billing" className={navClass}>
+            <CreditCard size={18} />
             Billing
           </NavLink>
 
-          {/* Docs collapsible section */}
           <button
             onClick={() => setDocsOpen(!docsOpen)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isDocsPage
-                ? "bg-indigo-600/20 text-indigo-300"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                ? "text-gray-900 font-semibold"
+                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
+            <BookOpen size={18} />
             Docs
-            <svg
-              className={`w-4 h-4 transition-transform ${docsOpen ? "rotate-90" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight
+              size={14}
+              className={`ml-auto transition-transform ${docsOpen ? "rotate-90" : ""}`}
+            />
           </button>
           {docsOpen && (
-            <div className="ml-3 space-y-0.5">
+            <div className="ml-8 space-y-0.5">
               {docLinks.map(({ to, label, end }) => (
-                <NavLink key={to} to={to} end={end} className={navClass}>
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `block px-3 py-1.5 text-sm transition-colors rounded-lg ${
+                      isActive
+                        ? "text-gray-900 font-semibold"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                    }`
+                  }
+                >
                   {label}
                 </NavLink>
               ))}
             </div>
           )}
         </nav>
-        <div className="p-3 border-t border-slate-700">
+        <div className="p-3 border-t border-gray-200">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+              {initial}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-700 truncate">{email}</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`} />
+                <span className="text-[11px] text-gray-400">{connected ? "Connected" : "Disconnected"}</span>
+              </div>
+            </div>
+          </div>
           <button
             onClick={() => { logout(); window.location.href = "/"; }}
-            className="w-full px-3 py-2 text-sm text-slate-400 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors text-left"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
           >
+            <LogOut size={16} />
             Sign out
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 shrink-0 border-b border-slate-700 bg-slate-800/50 flex items-center px-6 justify-between">
-          <div />
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">
-              {email}
-            </span>
-            <span
-              className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
-              title={connected ? "Connected" : "Disconnected"}
-            />
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
-          <Outlet />
-        </main>
-      </div>
+      <main className="flex-1 overflow-auto p-6">
+        <Outlet />
+      </main>
     </div>
   );
 }
