@@ -62,8 +62,14 @@ export default function Login() {
         <div className="max-w-sm w-full mx-auto lg:mx-0">
           <div className="flex items-center gap-2.5 mb-12">
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <path d="M16 2L28.66 9.5V24.5L16 32L3.34 24.5V9.5L16 2Z" fill="#0A6E5C" opacity="0.1" stroke="#0A6E5C" strokeWidth="1.5"/>
-              <text x="16" y="21" textAnchor="middle" fill="#0A6E5C" fontSize="14" fontWeight="700" fontFamily="Inter, sans-serif">H</text>
+              <rect width="32" height="32" rx="8" fill="#0A6E5C" opacity="0.08"/>
+              <line x1="16" y1="26" x2="16" y2="15" stroke="#0A6E5C" strokeWidth="2.5" strokeLinecap="round"/>
+              <path d="M16 15 C14 12 10.5 10 8 8" stroke="#0A6E5C" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <line x1="16" y1="15" x2="16" y2="6.5" stroke="#0A6E5C" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M16 15 C18 12 21.5 10 24 8" stroke="#0A6E5C" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <circle cx="8" cy="8" r="2.5" fill="#10B981"/>
+              <circle cx="16" cy="6.5" r="2.5" fill="#10B981"/>
+              <circle cx="24" cy="8" r="2.5" fill="#10B981"/>
             </svg>
             <span className="text-base font-semibold text-gray-900 tracking-tight">HydraHouse</span>
           </div>
