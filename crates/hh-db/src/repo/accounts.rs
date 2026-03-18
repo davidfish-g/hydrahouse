@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-const ACCOUNT_COLUMNS: &str = "id, email, plan, created_at, stripe_customer_id, balance_cents, google_id";
+const ACCOUNT_COLUMNS: &str = "id, email, plan, created_at, stripe_customer_id, balance_cents, google_id, username";
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct AccountRow {
@@ -12,6 +12,7 @@ pub struct AccountRow {
     pub stripe_customer_id: Option<String>,
     pub balance_cents: i64,
     pub google_id: Option<String>,
+    pub username: Option<String>,
 }
 
 pub async fn create(pool: &PgPool, email: Option<&str>) -> Result<AccountRow, sqlx::Error> {
@@ -67,6 +68,32 @@ pub async fn find_by_email(pool: &PgPool, email: &str) -> Result<Option<AccountR
 pub async fn link_google_id(pool: &PgPool, account_id: Uuid, google_id: &str) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE accounts SET google_id = $1 WHERE id = $2")
         .bind(google_id)
+        .bind(account_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn update_username(pool: &PgPool, account_id: Uuid, username: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE accounts SET username = $1 WHERE id = $2")
+        .bind(username)
+        .bind(account_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn update_email(pool: &PgPool, account_id: Uuid, email: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE accounts SET email = $1 WHERE id = $2")
+        .bind(email)
+        .bind(account_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn unlink_google_id(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE accounts SET google_id = NULL WHERE id = $1")
         .bind(account_id)
         .execute(pool)
         .await?;
@@ -186,6 +213,76 @@ pub struct BalanceTransactionRow {
     pub balance_after: i64,
     pub description: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Hard-delete an account and all related data within a single transaction.
+/// Precondition: caller must verify no active heads exist before calling this.
+pub async fn delete_account(pool: &PgPool, account_id: Uuid) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    // Delete sessions (may also CASCADE, but be explicit)
+    sqlx::query("DELETE FROM sessions WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Delete API keys
+    sqlx::query("DELETE FROM api_keys WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Delete passkey credentials
+    sqlx::query("DELETE FROM passkey_credentials WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Delete wallet links
+    sqlx::query("DELETE FROM wallet_links WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Delete head-related data for terminated heads owned by this account
+    sqlx::query(
+        "DELETE FROM head_events WHERE head_id IN (SELECT id FROM heads WHERE account_id = $1)",
+    )
+    .bind(account_id)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "DELETE FROM participants WHERE head_id IN (SELECT id FROM heads WHERE account_id = $1)",
+    )
+    .bind(account_id)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query("DELETE FROM heads WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Nullify financial audit trails (preserve records)
+    sqlx::query("UPDATE balance_transactions SET account_id = NULL WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("UPDATE usage_records SET account_id = NULL WHERE account_id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Finally, delete the account
+    sqlx::query("DELETE FROM accounts WHERE id = $1")
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+    tx.commit().await?;
+    Ok(())
 }
 
 pub async fn list_balance_transactions(

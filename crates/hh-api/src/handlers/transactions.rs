@@ -22,7 +22,7 @@ pub async fn deposit(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
-    if !state.config.stripe_secret_key.is_empty() {
+    if !state.config.stripe_secret_key.is_empty() && !crate::billing::is_free_network(&row.network) {
         crate::billing::check_sufficient_balance(&state, account.0, state.config.cost_api_request_cents).await?;
     }
 
@@ -194,7 +194,7 @@ pub async fn deposit(
     if let Err(e) = hh_db::repo::usage::record(&state.db, account.0, Some(head_id), "deposit", 1).await {
         tracing::warn!(%head_id, error = %e, "failed to record deposit usage");
     }
-    if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id)).await {
+    if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id), &row.network).await {
         tracing::warn!(%head_id, error = %e, "failed to charge for API request");
     }
 
@@ -236,7 +236,7 @@ pub async fn transfer(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
-    if !state.config.stripe_secret_key.is_empty() {
+    if !state.config.stripe_secret_key.is_empty() && !crate::billing::is_free_network(&row.network) {
         crate::billing::check_sufficient_balance(&state, account.0, state.config.cost_api_request_cents).await?;
     }
 
@@ -420,7 +420,7 @@ pub async fn transfer(
     if let Err(e) = hh_db::repo::usage::record(&state.db, account.0, Some(head_id), "l2_tx", 1).await {
         tracing::warn!(%head_id, error = %e, "failed to record l2_tx usage");
     }
-    if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id)).await {
+    if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id), &row.network).await {
         tracing::warn!(%head_id, error = %e, "failed to charge for API request");
     }
 
@@ -445,7 +445,7 @@ pub async fn submit_tx(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let row = super::get_owned_head(&state.db, head_id, account.0).await?;
 
-    if !state.config.stripe_secret_key.is_empty() {
+    if !state.config.stripe_secret_key.is_empty() && !crate::billing::is_free_network(&row.network) {
         crate::billing::check_sufficient_balance(&state, account.0, state.config.cost_api_request_cents).await?;
     }
 
@@ -508,7 +508,7 @@ pub async fn submit_tx(
         {
             tracing::warn!(%head_id, error = %e, "failed to record l2_tx usage");
         }
-        if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id)).await {
+        if let Err(e) = crate::billing::charge_api_request(&state, account.0, Some(head_id), &row.network).await {
             tracing::warn!(%head_id, error = %e, "failed to charge for API request");
         }
 

@@ -204,6 +204,7 @@ export interface GoogleAuthResponse {
   email: string;
   plan: string;
   is_new_account: boolean;
+  username: string | null;
 }
 
 export async function googleAuth(idToken: string): Promise<GoogleAuthResponse> {
@@ -261,6 +262,8 @@ export interface AccountInfo {
   plan: string;
   balance_cents: number;
   has_billing: boolean;
+  username: string | null;
+  email: string | null;
 }
 
 export interface UsageResponse {
@@ -278,6 +281,17 @@ export interface BalanceTransaction {
 
 export async function getAccount(): Promise<AccountInfo> {
   return request("/v1/account");
+}
+
+export async function updateUsername(username: string): Promise<{ username: string }> {
+  return request("/v1/account/username", {
+    method: "PATCH",
+    body: JSON.stringify({ username }),
+  });
+}
+
+export async function deleteAccount(): Promise<{ deleted: boolean }> {
+  return request("/v1/account", { method: "DELETE" });
 }
 
 export async function getUsage(): Promise<UsageResponse> {
@@ -301,4 +315,154 @@ export async function createTopUp(
       cancel_url: cancelUrl,
     }),
   });
+}
+
+// --- Passkey Auth ---
+
+export interface PasskeyLoginBeginResponse {
+  challenge_id: string;
+  options: {
+    publicKey: PublicKeyCredentialRequestOptionsJSON;
+  };
+}
+
+interface PublicKeyCredentialRequestOptionsJSON {
+  challenge: string;
+  rpId: string;
+  timeout: number;
+  userVerification: string;
+  allowCredentials: Array<{ type: string; id: string }>;
+}
+
+export async function passkeyLoginBegin(): Promise<PasskeyLoginBeginResponse> {
+  const res = await fetch(`${BASE_URL}/v1/auth/passkey/login/begin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface PasskeyLoginCompleteResponse {
+  account_id: string;
+  email: string | null;
+  plan: string;
+  username: string | null;
+}
+
+export async function passkeyLoginComplete(body: {
+  challenge_id: string;
+  raw_id: string;
+  client_data_json: string;
+  authenticator_data: string;
+  signature: string;
+}): Promise<PasskeyLoginCompleteResponse> {
+  const res = await fetch(`${BASE_URL}/v1/auth/passkey/login/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error(b.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function passkeySignupBegin(): Promise<PasskeyLoginBeginResponse & { options: any }> {
+  const res = await fetch(`${BASE_URL}/v1/auth/passkey/signup/begin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function passkeySignupComplete(body: {
+  challenge_id: string;
+  credential: PublicKeyCredential;
+  name?: string;
+}): Promise<PasskeyLoginCompleteResponse> {
+  const res = await fetch(`${BASE_URL}/v1/auth/passkey/signup/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error(b.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function passkeyRegisterBegin(): Promise<{
+  challenge_id: string;
+  options: PublicKeyCredentialCreationOptions;
+}> {
+  return request("/v1/account/auth/passkey/register/begin", { method: "POST" });
+}
+
+export async function passkeyRegisterComplete(body: {
+  challenge_id: string;
+  credential: PublicKeyCredential;
+  name?: string;
+}): Promise<{ registered: boolean }> {
+  return request("/v1/account/auth/passkey/register/complete", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// --- Auth Methods ---
+
+export interface AuthMethods {
+  google: { email: string } | null;
+  passkeys: Array<{ id: string; name: string; created_at: string }>;
+}
+
+export async function listAuthMethods(): Promise<AuthMethods> {
+  return request("/v1/account/auth/methods");
+}
+
+export async function unlinkPasskey(id: string): Promise<{ deleted: boolean }> {
+  return request(`/v1/account/auth/passkey/${id}`, { method: "DELETE" });
+}
+
+export async function unlinkGoogle(): Promise<{ deleted: boolean }> {
+  return request("/v1/account/auth/google", { method: "DELETE" });
+}
+
+export async function linkGoogle(idToken: string): Promise<{ linked: boolean }> {
+  return request("/v1/account/auth/google/link", {
+    method: "POST",
+    body: JSON.stringify({ id_token: idToken }),
+  });
+}
+
+// --- Helpers ---
+
+export function bufferToBase64url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export function base64urlToBuffer(base64url: string): ArrayBuffer {
+  const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
 }

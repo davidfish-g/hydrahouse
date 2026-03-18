@@ -48,7 +48,69 @@ pub async fn get_account(
         "plan": row.plan,
         "balance_cents": row.balance_cents,
         "has_billing": row.stripe_customer_id.is_some(),
+        "username": row.username,
+        "email": row.email,
     })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUsernameRequest {
+    pub username: String,
+}
+
+pub async fn update_username(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(account): axum::Extension<crate::auth::AccountId>,
+    Json(req): Json<UpdateUsernameRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let username = req.username.trim();
+    if username.is_empty() || username.len() > 50 {
+        return Err(ApiError::bad_request("Username must be 1-50 characters"));
+    }
+    hh_db::repo::accounts::update_username(&state.db, account.0, username).await?;
+    Ok(Json(json!({ "username": username })))
+}
+
+/// Delete the authenticated account.
+/// Blocked if there are active (non-terminated) heads.
+pub async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(account): axum::Extension<crate::auth::AccountId>,
+) -> Result<axum::response::Response, ApiError> {
+    use axum::http::header::SET_COOKIE;
+    use axum::response::IntoResponse;
+
+    // Block if active heads exist
+    let active = hh_db::repo::heads::count_active_by_account(&state.db, account.0).await?;
+    if active > 0 {
+        return Err(ApiError::bad_request(format!(
+            "Cannot delete account: you have {} active head(s). Close or abort them first.",
+            active
+        )));
+    }
+
+    // Perform the deletion
+    hh_db::repo::accounts::delete_account(&state.db, account.0).await?;
+
+    // Clear the session cookie
+    let secure_flag = if state.config.listen_addr.contains("localhost")
+        || state.config.listen_addr.starts_with("127.")
+    {
+        ""
+    } else {
+        " Secure;"
+    };
+    let clear_cookie = format!(
+        "{}=;{} HttpOnly; SameSite=Lax; Path=/; Max-Age=0",
+        crate::auth::session_cookie_name(),
+        secure_flag,
+    );
+
+    Ok((
+        [(SET_COOKIE, clear_cookie)],
+        axum::Json(json!({ "deleted": true })),
+    )
+        .into_response())
 }
 
 /// Get usage statistics for the authenticated account.

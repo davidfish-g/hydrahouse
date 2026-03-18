@@ -142,6 +142,37 @@ pub fn session_cookie_name() -> &'static str {
 #[derive(Debug, Clone)]
 pub struct AccountId(pub uuid::Uuid);
 
+/// Create a new session for the given account and return the Set-Cookie header value.
+pub async fn create_session_cookie(
+    db: &sqlx::PgPool,
+    account_id: uuid::Uuid,
+    listen_addr: &str,
+) -> Result<(String, String), sqlx::Error> {
+    // Revoke old sessions
+    hh_db::repo::sessions::delete_for_account(db, account_id).await?;
+
+    let session_token = generate_session_token();
+    let token_id = compute_session_token_id(&session_token);
+    let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
+
+    hh_db::repo::sessions::create(db, account_id, &token_id, expires_at).await?;
+
+    let secure_flag = if listen_addr.contains("localhost") || listen_addr.starts_with("127.") {
+        ""
+    } else {
+        " Secure;"
+    };
+    let cookie_value = format!(
+        "{}={};{} HttpOnly; SameSite=Lax; Path=/; Max-Age={}",
+        session_cookie_name(),
+        session_token,
+        secure_flag,
+        7 * 24 * 3600,
+    );
+
+    Ok((session_token, cookie_value))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

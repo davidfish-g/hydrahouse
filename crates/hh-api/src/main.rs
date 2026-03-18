@@ -1,12 +1,12 @@
 use axum::middleware;
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
 use hh_api::auth;
 use hh_api::billing;
-use hh_api::handlers::{accounts, api_keys, auth_google, heads, health, transactions};
+use hh_api::handlers::{accounts, api_keys, auth_google, auth_link, auth_passkey, heads, health, transactions};
 use hh_api::openapi;
 use hh_api::state::AppState;
 use hh_api::ws;
@@ -85,6 +85,9 @@ async fn main() -> anyhow::Result<()> {
                 if let Err(e) = hh_db::repo::sessions::delete_expired(&cleanup_pool).await {
                     tracing::warn!(error = %e, "failed to clean up expired sessions");
                 }
+                if let Err(e) = hh_db::repo::auth_challenges::delete_expired(&cleanup_pool).await {
+                    tracing::warn!(error = %e, "failed to clean up expired auth challenges");
+                }
             }
         });
     }
@@ -101,13 +104,22 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/heads/{id}/tx", post(transactions::submit_tx))
         .route("/v1/heads/{id}/transfer", post(transactions::transfer))
         .route("/v1/heads/{id}/snapshot", get(transactions::get_snapshot))
-        .route("/v1/account", get(accounts::get_account))
+        .route("/v1/account", get(accounts::get_account).delete(accounts::delete_account))
+        .route("/v1/account/username", patch(accounts::update_username))
         .route("/v1/account/usage", get(accounts::get_usage))
         .route("/v1/account/keys", post(api_keys::create_api_key))
         .route("/v1/account/keys", get(api_keys::list_api_keys))
         .route("/v1/account/keys/{id}", delete(api_keys::delete_api_key))
         .route("/v1/billing/topup", post(billing::create_topup))
         .route("/v1/account/balance/history", get(billing::get_balance_history))
+        // Auth method management (requires login) — under /v1/account/auth to avoid
+        // path conflicts with the public /v1/auth routes during router merge.
+        .route("/v1/account/auth/passkey/register/begin", post(auth_passkey::register_begin))
+        .route("/v1/account/auth/passkey/register/complete", post(auth_passkey::register_complete))
+        .route("/v1/account/auth/passkey/{id}", delete(auth_link::unlink_passkey))
+        .route("/v1/account/auth/google", delete(auth_link::unlink_google))
+        .route("/v1/account/auth/google/link", post(auth_link::link_google))
+        .route("/v1/account/auth/methods", get(auth_link::list_auth_methods))
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_auth));
 
     let rate_limiter = hh_api::ratelimit::RateLimiter::new(500);
@@ -145,6 +157,7 @@ async fn main() -> anyhow::Result<()> {
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
+            axum::http::Method::PATCH,
             axum::http::Method::DELETE,
         ])
         .allow_headers([
@@ -158,6 +171,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/accounts", post(accounts::create_account))
         .route("/v1/auth/google", post(auth_google::google_auth))
         .route("/v1/auth/logout", post(auth_google::logout))
+        // Passkey (unauthenticated)
+        .route("/v1/auth/passkey/login/begin", post(auth_passkey::login_begin))
+        .route("/v1/auth/passkey/login/complete", post(auth_passkey::login_complete))
+        .route("/v1/auth/passkey/signup/begin", post(auth_passkey::signup_begin))
+        .route("/v1/auth/passkey/signup/complete", post(auth_passkey::signup_complete))
         .route("/v1/heads/{id}/ws", get(ws::ws_proxy))
         .route("/v1/webhooks/stripe", post(billing::stripe_webhook))
         .merge(authed_routes)

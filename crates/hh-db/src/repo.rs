@@ -1,7 +1,9 @@
 pub mod accounts;
 pub mod api_keys;
+pub mod auth_challenges;
 pub mod head_events;
 pub mod heads;
 pub mod participants;
+pub mod passkeys;
 pub mod sessions;
 pub mod usage;

@@ -61,6 +61,10 @@ clap = { version = "4", features = ["derive", "env"] }
 
 # Auth
 argon2 = "0.5"
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+webauthn-rs-proto = "0.5"
+p256 = { version = "0.13", features = ["ecdsa"] }
+url = "2"
 
 # OpenAPI
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }

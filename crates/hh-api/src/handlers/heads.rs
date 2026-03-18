@@ -29,7 +29,8 @@ pub async fn create_head(
     }
 
     // Billing gate: check balance before provisioning (actual charge happens on HeadIsOpen).
-    if !state.config.stripe_secret_key.is_empty() {
+    // Testnets (preprod, preview) are free.
+    if !state.config.stripe_secret_key.is_empty() && !crate::billing::is_free_network(&req.network.to_string()) {
         crate::billing::check_sufficient_balance(&state, account.0, state.config.cost_head_open_cents).await?;
     }
 

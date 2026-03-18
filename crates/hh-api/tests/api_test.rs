@@ -77,6 +77,8 @@ fn test_config() -> AppConfig {
         railway_api_token: String::new(),
         railway_project_id: String::new(),
         railway_environment_id: String::new(),
+        webauthn_rp_id: String::new(),
+        webauthn_rp_origin: String::new(),
     }
 }
 

@@ -39,6 +39,11 @@ dotenvy = "0.15.7"
 urlencoding = "2.1"
 hmac = "0.12"
 sha2 = "0.10"
+webauthn-rs = { workspace = true }
+webauthn-rs-proto = { workspace = true }
+p256 = { workspace = true }
+url = { workspace = true }
+base64 = "0.22"
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }

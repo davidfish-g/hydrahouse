@@ -244,7 +244,7 @@ async fn run_lifecycle_monitor(
                     if let Err(e) = hh_db::repo::usage::record(&state.db, h.account_id, Some(head_id), "head_open", 1).await {
                         tracing::warn!(%head_id, error = %e, "failed to record head_open usage");
                     }
-                    if let Err(e) = crate::billing::charge_head_open(&state, h.account_id, head_id).await {
+                    if let Err(e) = crate::billing::charge_head_open(&state, h.account_id, head_id, &h.network).await {
                         tracing::warn!(%head_id, error = %e, "failed to charge head_open fee");
                     }
                 }

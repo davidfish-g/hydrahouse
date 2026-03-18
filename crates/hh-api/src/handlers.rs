@@ -1,6 +1,8 @@
 pub mod accounts;
 pub mod api_keys;
 pub mod auth_google;
+pub mod auth_link;
+pub mod auth_passkey;
 pub mod heads;
 pub mod health;
 pub mod transactions;

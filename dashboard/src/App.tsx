@@ -8,6 +8,7 @@ import HeadsList from "./pages/HeadsList";
 import HeadDetail from "./pages/HeadDetail";
 import Billing from "./pages/Billing";
 import ApiKeys from "./pages/ApiKeys";
+import Account from "./pages/Account";
 import QuickStart from "./pages/docs/QuickStart";
 import Concepts from "./pages/docs/Concepts";
 import SdkGuide from "./pages/docs/SdkGuide";
@@ -48,6 +49,7 @@ export default function App() {
           >
             <Route path="heads" element={<HeadsList />} />
             <Route path="keys" element={<ApiKeys />} />
+            <Route path="account" element={<Account />} />
             <Route path="billing" element={<Billing />} />
             <Route path="heads/:id" element={<HeadDetail />} />
             <Route path="docs" element={<QuickStart />} />

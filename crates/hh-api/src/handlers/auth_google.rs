@@ -47,6 +47,7 @@ pub struct GoogleAuthResponse {
     pub email: String,
     pub plan: String,
     pub is_new_account: bool,
+    pub username: Option<String>,
 }
 
 pub async fn google_auth(
@@ -136,6 +137,7 @@ pub async fn google_auth(
         email: email.clone(),
         plan: account.plan,
         is_new_account,
+        username: account.username,
     };
 
     let mut response = Json(body).into_response();

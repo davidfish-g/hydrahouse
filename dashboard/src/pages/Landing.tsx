@@ -193,10 +193,20 @@ function Pricing() {
     <section id="pricing" className={`py-20 px-6 scroll-mt-20 ${CREAM}`}>
       <div className="max-w-4xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">Pricing</h2>
-        <p className="text-gray-500 text-center mb-12">No subscriptions, no commitments. Only pay for what you use.</p>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-10 text-center">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-6">Per Head</p>
+        <p className="text-gray-500 text-center mb-12">No subscriptions, no commitments. Testnets are free — only mainnet is paid.</p>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl shadow-md border-2 border-emerald-200 p-8 text-center relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">Testnets</div>
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-6 mt-2">Preprod &amp; Preview</p>
+            <div className="flex items-baseline justify-center gap-1 mb-2">
+              <span className="text-6xl font-bold tracking-tight text-gray-900">Free</span>
+            </div>
+            <p className="text-sm text-gray-400 mb-6">no limits, no credit card</p>
+            <div className="h-px bg-gray-100 mb-6" />
+            <p className="text-xs text-gray-500 leading-relaxed">Full access to head creation, lifecycle management, deposits, transfers, and all API endpoints on preprod and preview.</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-8 text-center">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-6">Mainnet — Per Head</p>
             <div className="flex items-baseline justify-center gap-1 mb-2">
               <span className="text-6xl font-bold tracking-tight text-gray-900">$5</span>
             </div>
@@ -204,8 +214,8 @@ function Pricing() {
             <div className="h-px bg-gray-100 mb-6" />
             <p className="text-xs text-gray-500 leading-relaxed">Provisioning, key generation, orchestration, and full lifecycle management through fanout.</p>
           </div>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-10 text-center">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-6">Per Request</p>
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-8 text-center">
+            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-6">Mainnet — Per Request</p>
             <div className="flex items-baseline justify-center gap-1 mb-2">
               <span className="text-6xl font-bold tracking-tight text-gray-900">$0.01</span>
             </div>

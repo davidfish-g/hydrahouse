@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth";
-import { Layers, Key, CreditCard, BookOpen, ChevronRight, LogOut } from "lucide-react";
+import { Layers, Key, CreditCard, BookOpen, ChevronRight, LogOut, User } from "lucide-react";
 
 const docLinks = [
   { to: "/docs", label: "Quick Start", end: true },
@@ -20,7 +20,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 
 export default function Layout() {
-  const { email, logout } = useAuth();
+  const { displayName, logout } = useAuth();
   const location = useLocation();
   const isDocsPage = location.pathname.startsWith("/docs");
   const [docsOpen, setDocsOpen] = useState(isDocsPage);
@@ -42,7 +42,7 @@ export default function Layout() {
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  const initial = email ? email.charAt(0).toUpperCase() : "?";
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : "?";
 
   return (
     <div className="flex h-screen">
@@ -75,6 +75,10 @@ export default function Layout() {
           <NavLink to="/billing" className={navClass}>
             <CreditCard size={18} />
             Billing
+          </NavLink>
+          <NavLink to="/account" className={navClass}>
+            <User size={18} />
+            Account
           </NavLink>
 
           <button
@@ -119,7 +123,7 @@ export default function Layout() {
               {initial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-700 truncate">{email}</p>
+              <p className="text-xs text-gray-700 truncate">{displayName}</p>
               <div className="flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`} />
                 <span className="text-[11px] text-gray-400">{connected ? "Connected" : "Disconnected"}</span>

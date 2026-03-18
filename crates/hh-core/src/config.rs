@@ -62,6 +62,14 @@ pub struct AppConfig {
     /// Railway environment ID for deploying hydra-node services.
     #[serde(default)]
     pub railway_environment_id: String,
+
+    /// WebAuthn Relying Party ID (e.g. "hydrahouse.io"). If empty, passkey auth is disabled.
+    #[serde(default)]
+    pub webauthn_rp_id: String,
+
+    /// WebAuthn Relying Party origin (e.g. "https://hydrahouse.io"). Must match RP ID.
+    #[serde(default)]
+    pub webauthn_rp_origin: String,
 }
 
 fn default_listen_addr() -> String {
@@ -140,6 +148,8 @@ impl AppConfig {
             railway_api_token: std::env::var("RAILWAY_API_TOKEN").unwrap_or_default(),
             railway_project_id: std::env::var("RAILWAY_PROJECT_ID").unwrap_or_default(),
             railway_environment_id: std::env::var("RAILWAY_ENVIRONMENT_ID").unwrap_or_default(),
+            webauthn_rp_id: std::env::var("WEBAUTHN_RP_ID").unwrap_or_default(),
+            webauthn_rp_origin: std::env::var("WEBAUTHN_RP_ORIGIN").unwrap_or_default(),
         }
     }
 }

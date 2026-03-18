@@ -255,6 +255,11 @@ async fn handle_checkout_completed(state: &AppState, event: &StripeEvent) -> Res
 
 // --- Billing helpers used by handlers ---
 
+/// Testnet networks (preprod, preview) are free to use.
+pub fn is_free_network(network: &str) -> bool {
+    matches!(network, "preprod" | "preview")
+}
+
 /// Check that the account has sufficient balance. Returns ApiError with 402 if not.
 pub async fn check_sufficient_balance(state: &AppState, account_id: Uuid, required_cents: i64) -> Result<(), ApiError> {
     let account = hh_db::repo::accounts::find_by_id(&state.db, account_id)
@@ -271,8 +276,9 @@ pub async fn check_sufficient_balance(state: &AppState, account_id: Uuid, requir
 }
 
 /// Charge for opening a head. Returns Ok(()) or logs warning if deduction fails.
-pub async fn charge_head_open(state: &AppState, account_id: Uuid, head_id: Uuid) -> Result<(), ApiError> {
-    if state.config.stripe_secret_key.is_empty() {
+/// Testnets (preprod, preview) are free.
+pub async fn charge_head_open(state: &AppState, account_id: Uuid, head_id: Uuid, network: &str) -> Result<(), ApiError> {
+    if state.config.stripe_secret_key.is_empty() || is_free_network(network) {
         return Ok(());
     }
     let cost = state.config.cost_head_open_cents;
@@ -290,9 +296,9 @@ pub async fn charge_head_open(state: &AppState, account_id: Uuid, head_id: Uuid)
     }
 }
 
-/// Charge for an API request.
-pub async fn charge_api_request(state: &AppState, account_id: Uuid, head_id: Option<Uuid>) -> Result<(), ApiError> {
-    if state.config.stripe_secret_key.is_empty() {
+/// Charge for an API request. Testnets (preprod, preview) are free.
+pub async fn charge_api_request(state: &AppState, account_id: Uuid, head_id: Option<Uuid>, network: &str) -> Result<(), ApiError> {
+    if state.config.stripe_secret_key.is_empty() || is_free_network(network) {
         return Ok(());
     }
     let cost = state.config.cost_api_request_cents;
