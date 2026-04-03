@@ -152,7 +152,7 @@ export default function ApiReference() {
       <p className="text-gray-400 text-sm mb-8">
         Base URL:{" "}
         <code className="text-gray-600 text-xs bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono">
-          https://api.hydrahouse.io
+          https://api.hydrahouse.xyz
         </code>
       </p>
 

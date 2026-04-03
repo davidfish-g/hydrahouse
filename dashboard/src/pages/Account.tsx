@@ -14,8 +14,7 @@ import {
 } from "../api";
 import { useAuth } from "../auth";
 
-const GOOGLE_CLIENT_ID =
-  "736208371429-6gungtfe3nrul24m2rqhm83ccv09i0jh.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
 export default function Account() {
   const { displayName, setDisplayName, logout } = useAuth();

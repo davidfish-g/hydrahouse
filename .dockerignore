@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.git
+target/
+dashboard/node_modules/
+sdk/node_modules/
+.hydrahouse-data/
+.DS_Store
+.idea/
+.vscode/

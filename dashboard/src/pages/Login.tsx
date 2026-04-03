@@ -11,8 +11,7 @@ import {
   base64urlToBuffer,
 } from "../api";
 
-const GOOGLE_CLIENT_ID =
-  "736208371429-6gungtfe3nrul24m2rqhm83ccv09i0jh.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
 /** Wrap a promise with a timeout. */
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
