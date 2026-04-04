@@ -25,7 +25,3 @@ docker compose -f docker/docker-compose.yml up -d
 cp .env.example .env  # fill in your Blockfrost keys, etc.
 cargo run -p hh-api
 ```
-
-## License
-
-MIT

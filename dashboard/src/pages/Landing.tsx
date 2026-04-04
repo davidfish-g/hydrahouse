@@ -538,7 +538,7 @@ function OpenSource() {
           HydraHouse is open source.
         </h2>
         <p className="text-[#121c28]/45 leading-relaxed max-w-lg mx-auto mb-8">
-          Audit the code, run your own instance, or contribute. MIT licensed — built in the open for the Cardano ecosystem.
+          Audit the code, run your own instance, or contribute. MIT licensed.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
