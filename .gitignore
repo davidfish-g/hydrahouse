@@ -18,8 +18,9 @@
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE & tools
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo

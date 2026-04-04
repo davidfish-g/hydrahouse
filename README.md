@@ -1,153 +1,30 @@
 # HydraHouse
 
-Managed Hydra Head orchestration platform for Cardano. Create and manage Hydra L2 heads via a simple REST/WebSocket API.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/davidfish-g/hydrahouse/actions/workflows/ci.yml/badge.svg)](https://github.com/davidfish-g/hydrahouse/actions/workflows/ci.yml)
 
-Blockfrost solved L1 connectivity. HydraHouse solves everything else -- node provisioning, key generation, peer networking, lifecycle management, and teardown.
-
-## How it works
-
-```
-POST /v1/heads { "network": "preprod", "participants": 2 }
-
-  1. API creates DB records, transitions head to "provisioning"
-  2. Orchestrator generates Cardano + Hydra key pairs per participant
-  3. Keys stored as Kubernetes Secrets, Blockfrost creds mounted
-  4. hydra-node pods created with peer networking via K8s DNS
-  5. Lifecycle worker connects to hydra-node WebSocket
-  6. Sends Init -> auto-commits -> head opens
-  7. Developer connects via WebSocket proxy, submits L2 transactions
-  8. On close: contestation period -> auto-fanout -> teardown
+```bash
+curl -X POST https://api.hydrahouse.xyz/v1/heads \
+  -H "Authorization: Bearer hh_sk_..." \
+  -d '{"network": "preprod", "participants": 2}'
 ```
 
-## Architecture
+## Features
 
-```
-Developer -> REST/WebSocket API (Rust/axum)
-                    |
-             Control Plane
-             /      |      \
-     Orchestrator  Keys  Lifecycle Worker
-          |          |         |
-     Kubernetes  Ed25519   hydra-node WS
-          |                    |
-     hydra-node pods -----> Blockfrost (L1)
-```
+- **One API call** to provision a fully configured Hydra head — no node setup, no config files
+- **Auto lifecycle** — heads advance through Init, Commit, Open, Close, and Fanout automatically
+- **Real-time WebSocket** streaming of head state and L2 transactions
+- **Multi-party** — up to 10 participants with automatic peer discovery
+- **Incremental deposits** — add or remove funds from an open head without closing it
+- **Multi-network** — preprod, preview, and mainnet with the same API
 
-### Crate structure
-
-| Crate | Purpose |
-|-------|---------|
-| `hh-core` | Domain types, head lifecycle state machine, config, errors |
-| `hh-api` | axum HTTP/WebSocket server, auth middleware, lifecycle worker |
-| `hh-db` | PostgreSQL repository layer (SQLx) |
-| `hh-orchestrator` | K8s pod/service/secret provisioning for hydra-nodes |
-| `hh-keys` | Ed25519 key generation (Cardano + Hydra envelope formats) |
-| `hh-cli` | Developer CLI (`hydrahouse create/list/get/close/abort`) |
-
-## Local development
-
-### Prerequisites
-
-- Rust (stable)
-- Docker & Docker Compose
-- A Kubernetes cluster (for orchestration; API starts without it for DB-only testing)
-
-### Start the database
+## Self-hosting
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
-```
-
-### Configure
-
-```bash
-cp .env.example .env
-# Edit .env with your Blockfrost project ID, etc.
-source .env
-```
-
-### Run the API server
-
-```bash
+cp .env.example .env  # fill in your Blockfrost keys, etc.
 cargo run -p hh-api
 ```
-
-The server starts on `http://localhost:3000`.
-
-```bash
-curl http://localhost:3000/healthz
-curl http://localhost:3000/api-docs  # OpenAPI spec
-```
-
-### Run the CLI
-
-```bash
-export HYDRAHOUSE_API_KEY="hh_sk_your_key"
-
-cargo run -p hh-cli -- create --network preprod --participants 2
-cargo run -p hh-cli -- list
-cargo run -p hh-cli -- get <head-id>
-cargo run -p hh-cli -- close <head-id>
-```
-
-### Run tests
-
-```bash
-# Unit tests (no DB required)
-cargo test -p hh-core -p hh-keys
-
-# All tests (integration tests need Postgres running)
-cargo test --workspace
-```
-
-### Build Docker image
-
-```bash
-docker build -f docker/Dockerfile.api -t hydrahouse-api .
-```
-
-## API endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/healthz` | No | Health check |
-| GET | `/api-docs` | No | OpenAPI 3.0 spec |
-| POST | `/v1/accounts` | No | Create account (returns API key) |
-| GET | `/v1/heads/:id/ws` | No* | WebSocket proxy to hydra-node |
-| POST | `/v1/webhooks/stripe` | No | Stripe webhook receiver |
-| POST | `/v1/heads` | Yes | Create a new Hydra head (triggers provisioning) |
-| GET | `/v1/heads` | Yes | List your heads |
-| GET | `/v1/heads/:id` | Yes | Get head details + participants |
-| POST | `/v1/heads/:id/close` | Yes | Close an open head |
-| DELETE | `/v1/heads/:id` | Yes | Abort a head |
-| POST | `/v1/heads/:id/deposit` | Yes | Deposit funds L1→L2 |
-| POST | `/v1/heads/:id/decommit` | Yes | Withdraw funds L2→L1 |
-| GET | `/v1/heads/:id/events` | Yes | Get head event history |
-| POST | `/v1/heads/:id/tx` | Yes | Submit raw L2 transaction |
-| POST | `/v1/heads/:id/transfer` | Yes | Transfer ADA between participants on L2 |
-| GET | `/v1/heads/:id/snapshot` | Yes | Query L2 UTxO snapshot |
-| GET | `/v1/account` | Yes | Get account info |
-| POST | `/v1/account/rotate-key` | Yes | Rotate API key |
-| GET | `/v1/account/usage` | Yes | Get usage statistics |
-| POST | `/v1/billing/checkout` | Yes | Create Stripe checkout session |
-| POST | `/v1/billing/portal` | Yes | Create Stripe billing portal session |
-
-Auth uses `Authorization: Bearer hh_sk_...` API keys.
-
-## Head lifecycle
-
-```
-Requested -> Provisioning -> Initializing -> Committing -> Open -> Closing -> Closed -> FannedOut
-                                  |                                  |
-                                  +---------> Aborted <--------------+
-```
-
-The lifecycle worker automatically advances the state by monitoring hydra-node WebSocket events:
-- `HeadIsInitializing` -> auto-commit empty for all participants
-- `HeadIsOpen` -> head ready for L2 transactions
-- `HeadIsClosed` -> waiting for contestation period
-- `ReadyToFanout` -> auto-fanout
-- `HeadIsFinalized` -> teardown K8s resources
 
 ## License
 
